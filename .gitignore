@@ -1,0 +1,15 @@
+[Bb]in/
+[Oo]bj/
+.vs/
+.vscode/
+*.user
+*.userosscache
+*.sln.docstates
+appsettings.Development.json
+appsettings.json
+UserSecrets/
+.dockerignore
+obj/Docker/
+.DS_Store
+Thumbs.db
+*.log
