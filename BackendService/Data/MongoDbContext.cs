@@ -13,7 +13,7 @@ namespace BackendService.Data
         {
             var client = new MongoClient(settings.Value.GameDevDB);
 
-            _database = client.GetDatabase("GameDevRoadMap");
+            _database = client.GetDatabase("GameDevRoadmapDB");
         }
 
         public IMongoCollection<User> Users => _database.GetCollection<User>("Users");
