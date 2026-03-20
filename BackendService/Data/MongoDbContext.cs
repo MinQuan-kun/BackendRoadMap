@@ -1,7 +1,8 @@
-﻿using MongoDB.Driver;
-using Microsoft.Extensions.Options;
-using BackendService.Configurations;
+﻿using BackendService.Configurations;
 using BackendService.Models.Entities;
+using Microsoft.Extensions.Options;
+using MongoDB.Bson;
+using MongoDB.Driver;
 
 namespace BackendService.Data
 {
@@ -12,8 +13,17 @@ namespace BackendService.Data
         public MongoDbContext(IOptions<DatabaseSettings> settings)
         {
             var client = new MongoClient(settings.Value.GameDevDB);
-
             _database = client.GetDatabase("GameDevRoadmapDB");
+
+            try
+            {
+                _database.RunCommand<BsonDocument>(new BsonDocument("ping", 1));
+                Console.WriteLine("Kết nối thành công tới Database: " + _database.DatabaseNamespace.DatabaseName);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Kết nối thất bại: " + ex.Message);
+            }
         }
 
         public IMongoCollection<User> Users => _database.GetCollection<User>("Users");

@@ -21,4 +21,4 @@ namespace BackendService.Models.Entities
         [BsonElement("admin_ids")]
         public List<string> AdminIds { get; set; } = new(); // Danh sách User_id quản lý công ty
     }
-}
+}   

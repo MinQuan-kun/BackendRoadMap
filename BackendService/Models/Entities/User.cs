@@ -24,6 +24,11 @@ namespace BackendService.Models.Entities
         [BsonElement("role")]
         public int Role { get; set; } = 1;
 
+        [BsonElement("bio")]
+        public string bio { get; set; } = null!;
+        [BsonElement("avatar_url")]
+        public string? avatar { get; set; } = null; 
+
         [BsonElement("completed_nodes")]
         public List<string> CompletedNodes { get; set; } = new();
 

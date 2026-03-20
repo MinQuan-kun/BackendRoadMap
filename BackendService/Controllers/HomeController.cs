@@ -8,23 +8,18 @@ namespace BackendService.Controllers
     {
         public IActionResult Index()
         {
-            return Ok(new
-            {
-                status = "ok",
-                message = "BackendService is running",
-                timestamp = DateTime.UtcNow
-            });
+            return View();
         }
 
         public IActionResult Privacy()
         {
-            return Ok(new { message = "Privacy endpoint" });
+            return View();
         }
 
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
         public IActionResult Error()
         {
-            return Problem(detail: "An unexpected error occurred.", title: "Server Error");
+            return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
         }
     }
 }

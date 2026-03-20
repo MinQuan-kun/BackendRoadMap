@@ -3,6 +3,7 @@ using MongoDB.Bson.Serialization.Attributes;
 
 namespace BackendService.Models.Entities
 {
+    [BsonIgnoreExtraElements] // Giúp code không bị crash khi gặp trường lạ trong DB
     public class Roadmap
     {
         [BsonId]
@@ -12,73 +13,29 @@ namespace BackendService.Models.Entities
         [BsonElement("title")]
         public string Title { get; set; } = null!;
 
-        [BsonElement("creator_id")]
-        public string? CreatorId { get; set; }
+        [BsonElement("engine")]
+        public string Engine { get; set; } = null!;
 
-        [BsonElement("nodes")]
-        public List<RoadmapNode> Nodes { get; set; } = new();
+        [BsonElement("description")]
+        public string? Description { get; set; }
 
-        [BsonElement("connections")]
-        public List<RoadmapConnection> Connections { get; set; } = new();
+        [BsonElement("nodes_layout")]
+        public List<NodeLayout> NodesLayout { get; set; } = new();
 
         [BsonElement("created_at")]
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-
-        [BsonElement("updated_at")]
-        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime CreatedAt { get; set; }
     }
 
-    public class RoadmapNode
+    public class NodeLayout
     {
-        [BsonElement("id")]
-        public string Id { get; set; } = null!;
-
-        [BsonElement("type")]
-        public string Type { get; set; } = null!;
-
-        [BsonElement("content")]
-        public string? Content { get; set; }
+        [BsonElement("node_id")]
+        [BsonRepresentation(BsonType.ObjectId)]
+        public string NodeId { get; set; } = null!;
 
         [BsonElement("x")]
         public double X { get; set; }
 
         [BsonElement("y")]
         public double Y { get; set; }
-
-        [BsonElement("width")]
-        public double Width { get; set; }
-
-        [BsonElement("height")]
-        public double Height { get; set; }
-
-        [BsonElement("link")]
-        public string? Link { get; set; }
-
-        [BsonElement("style")]
-        public BsonDocument Style { get; set; } = new();
-
-        [BsonElement("created_at")]
-        public long? CreatedAt { get; set; }
-
-        [BsonElement("updated_at")]
-        public long? UpdatedAt { get; set; }
-    }
-
-    public class RoadmapConnection
-    {
-        [BsonElement("id")]
-        public string Id { get; set; } = null!;
-
-        [BsonElement("from_node_id")]
-        public string FromNodeId { get; set; } = null!;
-
-        [BsonElement("to_node_id")]
-        public string ToNodeId { get; set; } = null!;
-
-        [BsonElement("from_point")]
-        public string FromPoint { get; set; } = "bottom";
-
-        [BsonElement("to_point")]
-        public string ToPoint { get; set; } = "top";
     }
 }

@@ -11,6 +11,12 @@ namespace BackendService.Models.Entities
 
         [BsonElement("name")]
         public string Name { get; set; } = null!;
+        [BsonElement("engine")]
+        public string? Engine { get; set; } = null;
+
+        [BsonElement("parent_id")]
+        [BsonRepresentation(BsonType.ObjectId)]
+        public string? ParentId { get; set; }
 
         [BsonElement("category")]
         public string Category { get; set; } = null!;
