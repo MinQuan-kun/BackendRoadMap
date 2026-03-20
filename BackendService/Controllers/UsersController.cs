@@ -1,7 +1,12 @@
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
 using BackendService.Data;
+using BackendService.Models.DTOs.User;
 using BackendService.Models.Entities;
+using BCrypt.Net;
 using Microsoft.AspNetCore.Mvc;
-using MongoDB.Bson;
+using Microsoft.IdentityModel.Tokens;
 using MongoDB.Driver;
 
 namespace BackendService.Controllers
@@ -11,183 +16,77 @@ namespace BackendService.Controllers
     public class UsersController : ControllerBase
     {
         private readonly MongoDbContext _context;
+        private readonly IConfiguration _config;
 
-        public UsersController(MongoDbContext context)
+        public UsersController(MongoDbContext context, IConfiguration config)
         {
             _context = context;
+            _config = config;
         }
 
-        [HttpGet]
-        public async Task<ActionResult<IEnumerable<UserResponseDto>>> GetAllUsers(CancellationToken cancellationToken)
+        [HttpPost("register")]
+        public async Task<ActionResult<RegisterRequest>> Register(RegisterRequest request)
         {
-            var users = await _context.Users
-                .Find(Builders<User>.Filter.Empty)
-                .ToListAsync(cancellationToken);
+            // Kiểm tra Email tồn tại
+            var emailExists = await _context.Users.Find(u => u.Email == request.Email).AnyAsync();
+            if (emailExists) return BadRequest("Email này đã được đăng ký bởi một tài khoản khác.");
 
-            var response = users.Select(MapToResponse);
-
-            return Ok(response);
-        }
-
-        [HttpGet("{id}")]
-        public async Task<ActionResult<UserResponseDto>> GetUserById(string id, CancellationToken cancellationToken)
-        {
-            if (!ObjectId.TryParse(id, out _))
-            {
-                return BadRequest(new { message = "Invalid user id format." });
-            }
-
-            var user = await _context.Users
-                .Find(u => u.Id == id)
-                .FirstOrDefaultAsync(cancellationToken);
-
-            if (user is null)
-            {
-                return NotFound(new { message = "User not found." });
-            }
-
-            return Ok(MapToResponse(user));
-        }
-
-        [HttpPost]
-        public async Task<ActionResult<UserResponseDto>> CreateUser(
-            [FromBody] CreateUserRequest request,
-            CancellationToken cancellationToken)
-        {
-            if (string.IsNullOrWhiteSpace(request.UserName) ||
-                string.IsNullOrWhiteSpace(request.Password) ||
-                string.IsNullOrWhiteSpace(request.FullName) ||
-                string.IsNullOrWhiteSpace(request.Email))
-            {
-                return BadRequest(new { message = "UserName, Password, FullName, and Email are required." });
-            }
-
-            var emailExists = await _context.Users
-                .Find(u => u.Email == request.Email)
-                .AnyAsync(cancellationToken);
-
-            if (emailExists)
-            {
-                return Conflict(new { message = "Email already exists." });
-            }
-
-            var userNameExists = await _context.Users
-                .Find(u => u.UserName == request.UserName)
-                .AnyAsync(cancellationToken);
-
-            if (userNameExists)
-            {
-                return Conflict(new { message = "UserName already exists." });
-            }
+            // Kiểm tra UserName đã tồn tại chưa
+            var userExists = await _context.Users.Find(u => u.UserName == request.UserName).AnyAsync();
+            if (userExists) return BadRequest("Tên đăng nhập này đã tồn tại.");
 
             var user = new User
             {
-                UserName = request.UserName.Trim(),
-                Password = request.Password,
-                FullName = request.FullName.Trim(),
-                Email = request.Email.Trim(),
-                Role = request.Role,
-                CompletedNodes = request.CompletedNodes ?? new List<string>(),
-                OnboardingResponses = request.OnboardingResponses ?? new Dictionary<string, string>()
+                UserName = request.UserName,
+                Email = request.Email,
+                Password = BCrypt.Net.BCrypt.HashPassword(request.Password),
+                Role = 1,
+                CreateAt = DateTime.UtcNow
             };
 
-            await _context.Users.InsertOneAsync(user, cancellationToken: cancellationToken);
-
-            return CreatedAtAction(
-                nameof(GetUserById),
-                new { id = user.Id },
-                MapToResponse(user));
-        }
-
-        [HttpPut("{id}")]
-        public async Task<ActionResult<UserResponseDto>> UpdateUser(
-            string id,
-            [FromBody] UpdateUserRequest request,
-            CancellationToken cancellationToken)
-        {
-            if (!ObjectId.TryParse(id, out _))
-            {
-                return BadRequest(new { message = "Invalid user id format." });
-            }
-
-            var user = await _context.Users
-                .Find(u => u.Id == id)
-                .FirstOrDefaultAsync(cancellationToken);
-
-            if (user is null)
-            {
-                return NotFound(new { message = "User not found." });
-            }
-
-            if (!string.IsNullOrWhiteSpace(request.UserName) && request.UserName != user.UserName)
-            {
-                var userNameExists = await _context.Users
-                    .Find(u => u.UserName == request.UserName && u.Id != id)
-                    .AnyAsync(cancellationToken);
-                if (userNameExists)
-                {
-                    return Conflict(new { message = "UserName already exists." });
-                }
-                user.UserName = request.UserName.Trim();
-            }
-
-            if (!string.IsNullOrWhiteSpace(request.Email) && request.Email != user.Email)
-            {
-                var emailExists = await _context.Users
-                    .Find(u => u.Email == request.Email && u.Id != id)
-                    .AnyAsync(cancellationToken);
-                if (emailExists)
-                {
-                    return Conflict(new { message = "Email already exists." });
-                }
-                user.Email = request.Email.Trim();
-            }
-
-            if (!string.IsNullOrWhiteSpace(request.FullName))
-            {
-                user.FullName = request.FullName.Trim();
-            }
-
-            if (!string.IsNullOrWhiteSpace(request.Password))
-            {
-                user.Password = request.Password;
-            }
-
-            if (request.Role.HasValue)
-            {
-                user.Role = request.Role.Value;
-            }
-
-            if (request.CompletedNodes is not null)
-            {
-                user.CompletedNodes = request.CompletedNodes;
-            }
-
-            if (request.OnboardingResponses is not null)
-            {
-                user.OnboardingResponses = request.OnboardingResponses;
-            }
-
-            await _context.Users.ReplaceOneAsync(u => u.Id == id, user, cancellationToken: cancellationToken);
-
+            await _context.Users.InsertOneAsync(user);
             return Ok(MapToResponse(user));
         }
 
-        [HttpDelete("{id}")]
-        public async Task<ActionResult> DeleteUser(string id, CancellationToken cancellationToken)
+        [HttpPost("login")]
+        public async Task<ActionResult<AuthResponseDto>> Login(LoginRequest request)
         {
-            if (!ObjectId.TryParse(id, out _))
+            var user = await _context.Users.Find(u => u.Email == request.Email).FirstOrDefaultAsync();
+
+            if (user == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.Password))
             {
-                return BadRequest(new { message = "Invalid user id format." });
+                return Unauthorized("Email hoặc mật khẩu không chính xác.");
             }
 
-            var deleteResult = await _context.Users.DeleteOneAsync(u => u.Id == id, cancellationToken);
-            if (deleteResult.DeletedCount == 0)
-            {
-                return NotFound(new { message = "User not found." });
-            }
+            var token = CreateToken(user);
 
-            return NoContent();
+            return Ok(new AuthResponseDto
+            {
+                Token = token,
+                User = MapToResponse(user)
+            });
+        }
+
+        // File: Controllers/UsersController.cs
+        private string CreateToken(User user)
+        {
+            var jwtKey = _config["Jwt:Key"] ?? throw new Exception("JWT Key is missing");
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
+
+            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256Signature);
+
+            var tokenDescriptor = new SecurityTokenDescriptor
+            {
+                Subject = new ClaimsIdentity(new[] {
+            new Claim(ClaimTypes.NameIdentifier, user.Id!),
+            new Claim(ClaimTypes.Name, user.UserName)
+        }),
+                Expires = DateTime.Now.AddDays(7),
+                SigningCredentials = creds
+            };
+
+            var tokenHandler = new JwtSecurityTokenHandler();
+            return tokenHandler.WriteToken(tokenHandler.CreateToken(tokenDescriptor));
         }
 
         private static UserResponseDto MapToResponse(User user)
@@ -203,38 +102,5 @@ namespace BackendService.Controllers
                 OnboardingResponses = user.OnboardingResponses
             };
         }
-    }
-
-    public class CreateUserRequest
-    {
-        public string UserName { get; set; } = string.Empty;
-        public string Password { get; set; } = string.Empty;
-        public string FullName { get; set; } = string.Empty;
-        public string Email { get; set; } = string.Empty;
-        public int Role { get; set; } = 1;
-        public List<string>? CompletedNodes { get; set; }
-        public Dictionary<string, string>? OnboardingResponses { get; set; }
-    }
-
-    public class UpdateUserRequest
-    {
-        public string? UserName { get; set; }
-        public string? Password { get; set; }
-        public string? FullName { get; set; }
-        public string? Email { get; set; }
-        public int? Role { get; set; }
-        public List<string>? CompletedNodes { get; set; }
-        public Dictionary<string, string>? OnboardingResponses { get; set; }
-    }
-
-    public class UserResponseDto
-    {
-        public string? Id { get; set; }
-        public string UserName { get; set; } = string.Empty;
-        public string FullName { get; set; } = string.Empty;
-        public string Email { get; set; } = string.Empty;
-        public int Role { get; set; }
-        public List<string> CompletedNodes { get; set; } = new();
-        public Dictionary<string, string> OnboardingResponses { get; set; } = new();
     }
 }

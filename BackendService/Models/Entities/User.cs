@@ -16,7 +16,7 @@ namespace BackendService.Models.Entities
         public string Password { get; set; } = null!;
 
         [BsonElement("full_name")]
-        public string FullName { get; set; } = null!;
+        public string? FullName { get; set; } = null;
 
         [BsonElement("email")]
         public string Email { get; set; } = null!;
@@ -27,7 +27,9 @@ namespace BackendService.Models.Entities
         [BsonElement("bio")]
         public string bio { get; set; } = null!;
         [BsonElement("avatar_url")]
-        public string? avatar { get; set; } = null; 
+        public string? avatar { get; set; } = null;
+        [BsonElement("create_at")]
+        public DateTime? CreateAt { get; set; } = null;
 
         [BsonElement("completed_nodes")]
         public List<string> CompletedNodes { get; set; } = new();
