@@ -19,6 +19,18 @@ namespace BackendService.Models.Entities
         [BsonElement("description")]
         public string Description { get; set; } = null!;
 
+        [BsonElement("location")]
+        public string Location { get; set; } = string.Empty;
+
+        [BsonElement("salary")]
+        public string Salary { get; set; } = string.Empty;
+
+        [BsonElement("skills")]
+        public List<string> Skills { get; set; } = new();
+
+        [BsonElement("experience_level")]
+        public string ExperienceLevel { get; set; } = string.Empty;
+
         [BsonElement("target_roadmap_id")]
         public string TargetRoadmapId { get; set; } = null!;
 

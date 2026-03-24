@@ -33,6 +33,8 @@ namespace BackendService.Models.Entities
 
         [BsonElement("completed_nodes")]
         public List<string> CompletedNodes { get; set; } = new();
+        [BsonElement("interested_nodes")]
+        public List<string> InterestedNodes { get; set; } = new();
 
         [BsonElement("onboarding_responses")]
         public Dictionary<string, string> OnboardingResponses { get; set; } = new();

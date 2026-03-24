@@ -12,6 +12,13 @@ namespace BackendService.Models.Entities
         [BsonElement("question_text")]
         public string QuestionText { get; set; } = null!;
 
+        [BsonElement("parent_question_id")]
+        [BsonRepresentation(BsonType.ObjectId)]
+        public string? ParentQuestionId { get; set; }
+
+        [BsonElement("required_option_text")]
+        public string? RequiredOptionText { get; set; }
+
         [BsonElement("options")]
         public List<QuestionOption> Options { get; set; } = new();
     }
@@ -22,6 +29,6 @@ namespace BackendService.Models.Entities
         public string Text { get; set; } = null!;
 
         [BsonElement("mapping_nodes")]
-        public List<string> MappingNodes { get; set; } = new(); // Các Node ID liên quan đến câu trả lời
+        public List<string> MappingNodes { get; set; } = new();
     }
 }

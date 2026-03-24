@@ -67,7 +67,6 @@ namespace BackendService.Controllers
             });
         }
 
-        // File: Controllers/UsersController.cs
         private string CreateToken(User user)
         {
             var jwtKey = _config["Jwt:Key"] ?? throw new Exception("JWT Key is missing");
@@ -87,6 +86,18 @@ namespace BackendService.Controllers
 
             var tokenHandler = new JwtSecurityTokenHandler();
             return tokenHandler.WriteToken(tokenHandler.CreateToken(tokenDescriptor));
+        }
+
+        [HttpPut("{id}/onboarding")]
+        public async Task<IActionResult> SaveOnboarding(string id, [FromBody] OnboardingRequest request)
+        {
+            var user = await _context.Users.Find(u => u.Id == id).FirstOrDefaultAsync();
+            if (user == null) return NotFound("Người dùng không tồn tại.");
+
+            user.OnboardingResponses = request.Responses;
+
+            await _context.Users.ReplaceOneAsync(u => u.Id == id, user);
+            return Ok(new { message = "Lưu khảo sát thành công", data = MapToResponse(user) });
         }
 
         private static UserResponseDto MapToResponse(User user)
