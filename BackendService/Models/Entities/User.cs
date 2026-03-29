@@ -16,7 +16,7 @@ namespace BackendService.Models.Entities
         public string Password { get; set; } = null!;
 
         [BsonElement("full_name")]
-        public string? FullName { get; set; } = null;
+        public string? FullName { get; set; }
 
         [BsonElement("email")]
         public string Email { get; set; } = null!;

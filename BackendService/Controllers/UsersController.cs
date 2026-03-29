@@ -4,7 +4,9 @@ using System.Text;
 using BackendService.Data;
 using BackendService.Models.DTOs.User;
 using BackendService.Models.Entities;
+using BackendService.Services.Interface;
 using BCrypt.Net;
+using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using MongoDB.Driver;
@@ -17,35 +19,34 @@ namespace BackendService.Controllers
     {
         private readonly MongoDbContext _context;
         private readonly IConfiguration _config;
+        private readonly IValidator<RegisterRequestDto> _registerRequest;
+        private readonly IUserService _userService;
 
-        public UsersController(MongoDbContext context, IConfiguration config)
+        public UsersController(MongoDbContext context, IConfiguration config, IValidator<RegisterRequestDto> registerRequest, IUserService userService)
         {
             _context = context;
             _config = config;
+            _registerRequest = registerRequest;
+            _userService = userService;
         }
 
         [HttpPost("register")]
-        public async Task<ActionResult<RegisterRequest>> Register(RegisterRequest request)
+        public async Task<ActionResult<RegisterResponseDto>> RegisterAsync(RegisterRequestDto request, CancellationToken cancellationToken)
         {
-            // Kiểm tra Email tồn tại
-            var emailExists = await _context.Users.Find(u => u.Email == request.Email).AnyAsync();
-            if (emailExists) return BadRequest("Email này đã được đăng ký bởi một tài khoản khác.");
-
-            // Kiểm tra UserName đã tồn tại chưa
-            var userExists = await _context.Users.Find(u => u.UserName == request.UserName).AnyAsync();
-            if (userExists) return BadRequest("Tên đăng nhập này đã tồn tại.");
-
-            var user = new User
+            try
             {
-                UserName = request.UserName,
-                Email = request.Email,
-                Password = BCrypt.Net.BCrypt.HashPassword(request.Password),
-                Role = 1,
-                CreateAt = DateTime.UtcNow
-            };
-
-            await _context.Users.InsertOneAsync(user);
-            return Ok(MapToResponse(user));
+                var validationResult = await _registerRequest.ValidateAsync(request);
+                if (validationResult != null && !validationResult.IsValid)
+                {
+                    return BadRequest();
+                }
+                var result = await _userService.RegisterAsync(request, cancellationToken);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, new { error = ex.Message });
+            }
         }
 
         [HttpPost("login")]

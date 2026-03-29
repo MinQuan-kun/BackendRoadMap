@@ -1,8 +1,15 @@
-using System.Text;
 using BackendService.Configurations;
 using BackendService.Data;
+using BackendService.FluentValidation.Validators;
+using BackendService.Models.DTOs.User;
+using BackendService.Repository;
+using BackendService.Repository.Interface;
+using BackendService.Services;
+using BackendService.Services.Interface;
+using FluentValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -16,6 +23,18 @@ builder.Services.Configure<CloudinarySettings>(
 // Đăng ký Service
 builder.Services.AddSingleton<MongoDbContext>();
 builder.Services.AddScoped<ICloudinaryService, CloudinaryService>();
+builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IAuthService, AuthService>();
+
+
+
+// Đăng ky Repository
+builder.Services.AddScoped<IUserRepository, UserRepository>();
+
+
+
+// Đăng ký Validator
+builder.Services.AddScoped<IValidator<RegisterRequestDto>, RegisterRequestValidator>();
 
 builder.Services.AddControllersWithViews();
 builder.Services.AddAuthorization();
