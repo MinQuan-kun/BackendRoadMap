@@ -17,6 +17,24 @@ namespace BackendService.Controllers
             _context = context;
         }
 
+        // Lấy toàn bộ roadmap
+        [HttpGet]
+        public async Task<ActionResult<IEnumerable<RoadmapSummaryDto>>> GetAllRoadmaps()
+        {
+            var roadmaps = await _context.Roadmaps.Find(_ => true).ToListAsync();
+            
+            var response = roadmaps.Select(r => new RoadmapSummaryDto
+            {
+                Id = r.Id!,
+                Title = r.Title,
+                Engine = r.Engine,
+                Description = r.Description,
+                CreatedAt = r.CreatedAt
+            }).ToList();
+
+            return Ok(response);
+        }
+
         [HttpGet("{id}")]
         public async Task<ActionResult<RoadmapResponseDto>> GetRoadmap(string id)
         {
