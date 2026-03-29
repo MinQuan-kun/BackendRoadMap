@@ -32,4 +32,17 @@ public class FlowPosition
 public class FlowData
 {
     public string Label { get; set; } = null!;
+    public string? Description { get; set; }
+    public string? Category { get; set; }
+    public List<string> Resources { get; set; } = new();
+    public List<string> Prerequisites { get; set; } = new();
+}
+
+public class RoadmapSummaryDto
+{
+    public string Id { get; set; } = null!;
+    public string Title { get; set; } = null!;
+    public string Engine { get; set; } = null!;
+    public string? Description { get; set; }
+    public DateTime CreatedAt { get; set; }
 }
