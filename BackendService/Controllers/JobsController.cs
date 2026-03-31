@@ -1,5 +1,5 @@
 using BackendService.Data;
-using BackendService.Models.DTOs.Job;
+using BackendService.Models.DTOs.Job.Responses;
 using BackendService.Models.Entities;
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Driver;

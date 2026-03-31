@@ -1,4 +1,4 @@
-﻿namespace BackendService.Models.DTOs.User
+﻿namespace BackendService.Models.DTOs.User.Responses
 {
     public class UserResponseDto
     {

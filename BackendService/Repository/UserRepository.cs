@@ -21,6 +21,13 @@ namespace BackendService.Repository
                 .FirstOrDefaultAsync(cancellationToken);
         }
 
+        public async Task<User> GetByIdAsync(string id, CancellationToken cancellationToken = default)
+        {
+            return await _dbContext.Users
+                            .Find(u => u.Id == id)
+                            .FirstOrDefaultAsync(cancellationToken);
+        }
+
         public async Task<User> GetByUserNameAsync(string userName, CancellationToken cancellationToken = default)
         {
             return await _dbContext.Users

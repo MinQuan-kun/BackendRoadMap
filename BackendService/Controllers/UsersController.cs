@@ -1,14 +1,11 @@
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Text;
 using BackendService.Data;
-using BackendService.Models.DTOs.User;
+using BackendService.Mapping;
+using BackendService.Models.DTOs.User.Requests;
+using BackendService.Models.DTOs.User.Responses;
 using BackendService.Models.Entities;
 using BackendService.Services.Interface;
-using BCrypt.Net;
 using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.IdentityModel.Tokens;
 using MongoDB.Driver;
 
 namespace BackendService.Controllers
@@ -20,14 +17,18 @@ namespace BackendService.Controllers
         private readonly MongoDbContext _context;
         private readonly IConfiguration _config;
         private readonly IValidator<RegisterRequestDto> _registerRequest;
+        private readonly IValidator<LoginRequestDto> _loginRequest;
         private readonly IUserService _userService;
+        private readonly IAuthService _authService;
 
-        public UsersController(MongoDbContext context, IConfiguration config, IValidator<RegisterRequestDto> registerRequest, IUserService userService)
+        public UsersController(MongoDbContext context, IConfiguration config, IValidator<RegisterRequestDto> registerRequest, IUserService userService, IValidator<LoginRequestDto> loginRequest, IAuthService authService)
         {
             _context = context;
             _config = config;
             _registerRequest = registerRequest;
             _userService = userService;
+            _loginRequest = loginRequest;
+            _authService = authService;
         }
 
         [HttpPost("register")]
@@ -50,43 +51,40 @@ namespace BackendService.Controllers
         }
 
         [HttpPost("login")]
-        public async Task<ActionResult<AuthResponseDto>> Login(LoginRequest request)
+        public async Task<ActionResult<AuthResponseDto>> Login(LoginRequestDto request, CancellationToken cancellationToken)
         {
-            var user = await _context.Users.Find(u => u.Email == request.Email).FirstOrDefaultAsync();
-
-            if (user == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.Password))
+            try
             {
-                return Unauthorized("Email hoặc mật khẩu không chính xác.");
+                var validationResult = await _loginRequest.ValidateAsync(request);
+                if (validationResult != null && !validationResult.IsValid)
+                {
+                    return BadRequest();
+                }
+                var result = await _authService.LoginAsync(request, cancellationToken);
+                return Ok(result);
             }
-
-            var token = CreateToken(user);
-
-            return Ok(new AuthResponseDto
+            catch (Exception ex)
             {
-                Token = token,
-                User = MapToResponse(user)
-            });
+                return StatusCode(StatusCodes.Status500InternalServerError, new { error = ex.Message });
+            }
         }
 
-        private string CreateToken(User user)
+        [HttpGet("{id}")]
+        public async Task<ActionResult<UserResponseDto>> GetUserById(string id, CancellationToken cancellationToken)
         {
-            var jwtKey = _config["Jwt:Key"] ?? throw new Exception("JWT Key is missing");
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
-
-            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256Signature);
-
-            var tokenDescriptor = new SecurityTokenDescriptor
+            try
             {
-                Subject = new ClaimsIdentity(new[] {
-            new Claim(ClaimTypes.NameIdentifier, user.Id!),
-            new Claim(ClaimTypes.Name, user.UserName)
-        }),
-                Expires = DateTime.Now.AddDays(7),
-                SigningCredentials = creds
-            };
-
-            var tokenHandler = new JwtSecurityTokenHandler();
-            return tokenHandler.WriteToken(tokenHandler.CreateToken(tokenDescriptor));
+                var result = await _userService.GetUserByIdAsync(id, cancellationToken);
+                if (result == null)
+                {
+                    return NotFound();
+                }
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, new { error = ex.Message });
+            }
         }
 
         [HttpPut("{id}/onboarding")]
@@ -98,21 +96,7 @@ namespace BackendService.Controllers
             user.OnboardingResponses = request.Responses;
 
             await _context.Users.ReplaceOneAsync(u => u.Id == id, user);
-            return Ok(new { message = "Lưu khảo sát thành công", data = MapToResponse(user) });
-        }
-
-        private static UserResponseDto MapToResponse(User user)
-        {
-            return new UserResponseDto
-            {
-                Id = user.Id,
-                UserName = user.UserName,
-                FullName = user.FullName,
-                Email = user.Email,
-                Role = user.Role,
-                CompletedNodes = user.CompletedNodes,
-                OnboardingResponses = user.OnboardingResponses
-            };
+            return Ok(new { message = "Lưu khảo sát thành công", data = UserToUserResponseDto.Transform(user) });
         }
     }
 }

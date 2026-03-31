@@ -1,4 +1,4 @@
-namespace BackendService.Models.DTOs.Job
+namespace BackendService.Models.DTOs.Job.Responses
 {
     public class JobResponseDto
     {

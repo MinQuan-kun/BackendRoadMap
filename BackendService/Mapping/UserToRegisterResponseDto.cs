@@ -1,4 +1,4 @@
-﻿using BackendService.Models.DTOs.User;
+﻿using BackendService.Models.DTOs.User.Responses;
 using BackendService.Models.Entities;
 
 namespace BackendService.Mapping

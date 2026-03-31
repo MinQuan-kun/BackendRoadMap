@@ -1,4 +1,4 @@
-namespace BackendService.Models.DTOs.User
+namespace BackendService.Models.DTOs.User.Requests
 {
     public class RegisterRequestDto
     {

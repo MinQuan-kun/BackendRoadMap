@@ -10,7 +10,7 @@ namespace BackendService.Models.Entities
         public string? Id { get; set; }
 
         [BsonElement("user_name")]
-        public string UserName { get; set; } = null!;
+        public string UserName { get; set; } = string.Empty;
 
         [BsonElement("password")]
         public string Password { get; set; } = null!;
@@ -19,7 +19,7 @@ namespace BackendService.Models.Entities
         public string? FullName { get; set; }
 
         [BsonElement("email")]
-        public string Email { get; set; } = null!;
+        public string Email { get; set; } = string.Empty;
 
         [BsonElement("role")]
         public int Role { get; set; } = 1;

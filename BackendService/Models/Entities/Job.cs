@@ -39,5 +39,6 @@ namespace BackendService.Models.Entities
 
         [BsonElement("created_at")]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public Company? Company { get; set; }
     }
 }
