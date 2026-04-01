@@ -9,7 +9,7 @@ using static System.Net.Mime.MediaTypeNames;
 namespace BackendService.Controllers
 {
     [ApiController]
-    [Route("api/job")]
+    [Route("api/jobs")]
     public class JobsController(IJobService jobService, MongoDbContext context) : ControllerBase
     {
         private readonly MongoDbContext _context = context;

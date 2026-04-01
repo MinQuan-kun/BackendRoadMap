@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace BackendService.Controllers
 {
     [ApiController]
-    [Route("api/application")]
+    [Route("api/applications")]
     public class ApplicationController(IApplicationService applicationService) : Controller
     {
         private readonly IApplicationService _applicationService = applicationService;
