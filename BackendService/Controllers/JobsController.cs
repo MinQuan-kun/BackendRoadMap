@@ -1,23 +1,22 @@
 using BackendService.Data;
 using BackendService.Models.DTOs.Job.Responses;
 using BackendService.Models.Entities;
+using BackendService.Services.Interface;
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Driver;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace BackendService.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
-    public class JobsController : ControllerBase
+    [Route("api/job")]
+    public class JobsController(IJobService jobService, MongoDbContext context) : ControllerBase
     {
-        private readonly MongoDbContext _context;
+        private readonly MongoDbContext _context = context;
+        private readonly IJobService _jobService = jobService;
 
-        public JobsController(MongoDbContext context)
-        {
-            _context = context;
-        }
 
-        [HttpGet]
+        [HttpGet("filter")]
         public async Task<ActionResult> GetJobs(
             [FromQuery] string? search,
             [FromQuery] string? skills,
@@ -89,6 +88,32 @@ namespace BackendService.Controllers
             if (ts.TotalDays > 1) return $"{(int)ts.TotalDays} ngày trước";
             if (ts.TotalHours > 1) return $"{(int)ts.TotalHours} giờ trước";
             return "Vừa xong";
+        }
+        [HttpGet("list")]
+        public async Task<ActionResult<List<JobListResponsedto>>> GetJobList(CancellationToken cancellationToken)
+        {
+            try
+            {
+                var jobs = await _jobService.GetListAsync(cancellationToken);
+                return Ok(jobs);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, new { error = ex.Message });
+            }
+        }
+        [HttpGet("{id}")]
+        public async Task<ActionResult<JobDetailResponseDto>> GetJobByIdAsync([FromQuery] string id, CancellationToken cancellationToken)
+        {
+            try
+            {
+                var job = await _jobService.GetByIdAsync(id, cancellationToken);
+                return Ok(job);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, new { error = ex.Message });
+            }
         }
     }
 }

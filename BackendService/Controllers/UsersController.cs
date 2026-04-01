@@ -11,7 +11,7 @@ using MongoDB.Driver;
 namespace BackendService.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/user")]
     public class UsersController : ControllerBase
     {
         private readonly MongoDbContext _context;

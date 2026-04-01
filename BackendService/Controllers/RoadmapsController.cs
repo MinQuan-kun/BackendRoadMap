@@ -7,7 +7,7 @@ using BackendService.Models.DTOs;
 namespace BackendService.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/roadmap")]
     public class RoadmapController : ControllerBase
     {
         private readonly MongoDbContext _context;

@@ -10,6 +10,13 @@ namespace BackendService.Repository
     {
         private readonly MongoDbContext _mongoDbContext = mongoDbContext;
 
+        public async Task<Application> GetByIdAsync(string Id, CancellationToken cancellationToken = default)
+        {
+            return await _mongoDbContext.Applications
+                .Find(application => application.Id == Id)
+                .FirstOrDefaultAsync(cancellationToken);
+        }
+
         public async Task<List<Application>> GetListAsync(CancellationToken cancellationToken = default)
         {
             return await _mongoDbContext.Applications

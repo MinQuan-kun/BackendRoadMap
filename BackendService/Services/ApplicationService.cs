@@ -9,6 +9,16 @@ namespace BackendService.Services
     {
         private readonly IApplicationRepository _applicationRepository = applicationRepository;
 
+        public async Task<ApplicationDetailResponseDto> GetDetailAsync(string Id, CancellationToken cancellationToken)
+        {
+            var application = await _applicationRepository.GetByIdAsync(Id, cancellationToken);
+            if (application == null) {
+                throw new Exception("Application not found.");
+            }
+            var mappedApplication = ApplicationToApplicationDetailResponseDto.Transform(application);
+            return mappedApplication;
+        }
+
         public async Task<List<ApplicationResponseDto>> GetListAsync(CancellationToken cancellationToken)
         {
              var listApplication = await  _applicationRepository.GetListAsync(cancellationToken);
