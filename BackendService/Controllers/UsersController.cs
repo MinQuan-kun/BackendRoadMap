@@ -6,6 +6,8 @@ using BackendService.Models.Entities;
 using BackendService.Services.Interface;
 using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 using MongoDB.Driver;
 
 namespace BackendService.Controllers
@@ -61,6 +63,10 @@ namespace BackendService.Controllers
                     return BadRequest();
                 }
                 var result = await _authService.LoginAsync(request, cancellationToken);
+                if (result == null)
+                {
+                    return Unauthorized(new { message = "Tài khoản hoặc mật khẩu không chính xác." });
+                }
                 return Ok(result);
             }
             catch (Exception ex)
@@ -75,6 +81,31 @@ namespace BackendService.Controllers
             try
             {
                 var result = await _userService.GetUserByIdAsync(id, cancellationToken);
+                if (result == null)
+                {
+                    return NotFound();
+                }
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, new { error = ex.Message });
+            }
+        }
+
+        [HttpGet("profile")]
+        [Authorize]
+        public async Task<ActionResult<UserResponseDto>> GetProfile(CancellationToken cancellationToken)
+        {
+            try
+            {
+                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(userId))
+                {
+                    return Unauthorized();
+                }
+
+                var result = await _userService.GetUserByIdAsync(userId, cancellationToken);
                 if (result == null)
                 {
                     return NotFound();

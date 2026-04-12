@@ -1,4 +1,4 @@
-﻿using BackendService.Models.DTOs.User.Requests;
+using BackendService.Models.DTOs.User.Requests;
 using BackendService.Models.DTOs.User.Responses;
 using BackendService.Models.Entities;
 using BackendService.Repository.Interface;
@@ -27,7 +27,8 @@ namespace BackendService.Services
             var tokenDescriptor = new SecurityTokenDescriptor
             {
                 Subject = new ClaimsIdentity(new[] {
-            new Claim(ClaimTypes.NameIdentifier, user.Id!)
+            new Claim(ClaimTypes.NameIdentifier, user.Id!),
+            new Claim(ClaimTypes.Role, user.Role == 0 ? "Admin" : "User")
         }),
                 Expires = DateTime.Now.AddDays(7),
                 SigningCredentials = creds
