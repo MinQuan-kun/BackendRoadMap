@@ -5,6 +5,7 @@ using BackendService.Data;
 using BackendService.Models.DTOs.User;
 using BackendService.Models.Entities;
 using BCrypt.Net;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using MongoDB.Driver;
@@ -98,6 +99,25 @@ namespace BackendService.Controllers
 
             await _context.Users.ReplaceOneAsync(u => u.Id == id, user);
             return Ok(new { message = "Lưu khảo sát thành công", data = MapToResponse(user) });
+        }
+
+        [Authorize]
+        [HttpGet("profile")]
+        public async Task<ActionResult<UserResponseDto>> GetProfile()
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrWhiteSpace(userId))
+            {
+                return Unauthorized("Không thể xác định người dùng hiện tại.");
+            }
+
+            var user = await _context.Users.Find(u => u.Id == userId).FirstOrDefaultAsync();
+            if (user == null)
+            {
+                return NotFound("Không tìm thấy người dùng.");
+            }
+
+            return Ok(MapToResponse(user));
         }
 
         private static UserResponseDto MapToResponse(User user)

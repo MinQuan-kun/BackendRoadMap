@@ -44,6 +44,7 @@ var app = builder.Build();
 // Map các Endpoint
 app.UseRouting();
 app.UseCors("AllowAll");
+app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 app.Run();

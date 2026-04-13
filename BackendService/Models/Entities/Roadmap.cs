@@ -19,11 +19,20 @@ namespace BackendService.Models.Entities
         [BsonElement("description")]
         public string? Description { get; set; }
 
+        [BsonElement("difficulty")]
+        public string Difficulty { get; set; } = "All Levels";
+
+        [BsonElement("creator_id")]
+        public string? CreatorId { get; set; }
+
         [BsonElement("nodes_layout")]
         public List<NodeLayout> NodesLayout { get; set; } = new();
 
         [BsonElement("created_at")]
         public DateTime CreatedAt { get; set; }
+
+        [BsonElement("updated_at")]
+        public DateTime? UpdatedAt { get; set; }
     }
 
     public class NodeLayout
