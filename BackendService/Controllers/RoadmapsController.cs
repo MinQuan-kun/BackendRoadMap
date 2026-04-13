@@ -170,7 +170,7 @@ namespace BackendService.Controllers
         private async Task<RoadmapResponseDto> MapRoadmapResponseAsync(Roadmap roadmap)
         {
             var nodeIds = roadmap.NodesLayout.Select(nl => nl.NodeId).ToList();
-            var nodesData = await _context.Nodes.Find(n => nodeIds.Contains(n.Id)).ToListAsync();
+            var nodesData = await _context.Nodes.Find(n => n.Id != null && nodeIds.Contains(n.Id)).ToListAsync();
 
             return new RoadmapResponseDto
             {

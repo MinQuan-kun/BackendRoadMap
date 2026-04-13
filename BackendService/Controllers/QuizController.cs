@@ -7,7 +7,7 @@ using MongoDB.Driver;
 namespace BackendService.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/quizs")]
     public class QuizController : ControllerBase
     {
         private readonly MongoDbContext _context;

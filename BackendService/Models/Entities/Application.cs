@@ -7,7 +7,7 @@ namespace BackendService.Models.Entities
     {
         [BsonId]
         [BsonRepresentation(BsonType.ObjectId)]
-        public string? Id { get; set; }
+        public string Id { get; set; } = string.Empty;
 
         [BsonElement("job_id")]
         public string JobId { get; set; } = null!;
@@ -23,5 +23,8 @@ namespace BackendService.Models.Entities
 
         [BsonElement("applied_at")]
         public DateTime AppliedAt { get; set; } = DateTime.UtcNow;
+
+        public User? User { get; set; }
+        public Job? Job { get; set; }   
     }
 }

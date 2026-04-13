@@ -14,10 +14,10 @@ namespace BackendService.Models.Entities
         public string CompanyId { get; set; } = null!;
 
         [BsonElement("title")]
-        public string Title { get; set; } = null!;
+        public string Title { get; set; } = string.Empty;
 
         [BsonElement("description")]
-        public string Description { get; set; } = null!;
+        public string Description { get; set; } = string.Empty;
 
         [BsonElement("location")]
         public string Location { get; set; } = string.Empty;
@@ -39,5 +39,6 @@ namespace BackendService.Models.Entities
 
         [BsonElement("created_at")]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public Company? Company { get; set; }
     }
 }

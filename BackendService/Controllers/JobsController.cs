@@ -2,23 +2,24 @@ using BackendService.Data;
 using BackendService.Models.DTOs.Job;
 using BackendService.Models.Entities;
 using Microsoft.AspNetCore.Authorization;
+using BackendService.Services.Interface;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using System.Text.RegularExpressions;
 using MongoDB.Driver;
+using JobResponseDto = BackendService.Models.DTOs.Job.Responses.JobResponseDto;
+using JobDetailResponseDto = BackendService.Models.DTOs.Job.JobDetailResponseDto;
+using ApplyJobResponseDto = BackendService.Models.DTOs.Job.ApplyJobResponseDto;
 
 namespace BackendService.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
-    public class JobsController : ControllerBase
+    [Route("api/jobs")]
+    public class JobsController(IJobService jobService, MongoDbContext context) : ControllerBase
     {
-        private readonly MongoDbContext _context;
+        private readonly MongoDbContext _context = context;
+        private readonly IJobService _jobService = jobService;
 
-        public JobsController(MongoDbContext context)
-        {
-            _context = context;
-        }
 
         [HttpGet("filters")]
         public async Task<ActionResult> GetJobFilters()
