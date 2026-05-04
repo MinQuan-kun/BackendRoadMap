@@ -49,6 +49,7 @@ namespace BackendService.Services
             return new AuthResponseDto
             {
                 Token = token,
+                //User = Mapping.UserToUserResponseDto.Transform(user)
             };
         }
     }

@@ -1,4 +1,4 @@
-﻿using CloudinaryDotNet;
+using CloudinaryDotNet;
 using CloudinaryDotNet.Actions;
 using Microsoft.Extensions.Options;
 using BackendService.Configurations;
@@ -26,10 +26,15 @@ public class CloudinaryService : ICloudinaryService
                 File = new FileDescription(file.FileName, stream),
                 // Thiết lập đường dẫn thư mục
                 Folder = $"{_baseFolder}/{subFolder}",
-                Transformation = new Transformation().Height(500).Width(500).Crop("fill") //resize ảnh
+                Transformation = new Transformation().Quality("auto").FetchFormat("auto")
             };
             uploadResult = await _cloudinary.UploadAsync(uploadParams);
         }
         return uploadResult;
+    }
+    public async Task<DeletionResult> DeleteImageAsync(string publicId)
+    {
+        var deletionParams = new DeletionParams(publicId);
+        return await _cloudinary.DestroyAsync(deletionParams);
     }
 }

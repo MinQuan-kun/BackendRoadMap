@@ -1,4 +1,4 @@
-﻿using BackendService.Models.DTOs.User.Responses;
+using BackendService.Models.DTOs.User.Responses;
 using BackendService.Models.Entities;
 
 namespace BackendService.Mapping
@@ -9,15 +9,17 @@ namespace BackendService.Mapping
         {
             return new ResponseUserByIdDto
             {
-               UserName = user.UserName,
-               Email = user.Email,
-               AvatarUrl = user.avatar,
-               Fullname = user.FullName,    
-               Bio = user.bio,
-               Role = user.Role
-
-
-
+                Id = user.Id,
+                UserName = user.UserName,
+                Email = user.Email,
+                AvatarUrl = user.avatar,
+                Fullname = user.FullName,    
+                Bio = user.bio,
+                Role = user.Role,
+                Phone = user.Phone,
+                Address = user.Address,
+                Skills = user.Skills,
+                CompletedNodes = user.CompletedNodes
             };
         }
     }
