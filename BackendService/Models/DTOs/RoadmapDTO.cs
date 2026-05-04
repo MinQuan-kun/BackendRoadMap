@@ -41,6 +41,8 @@ public class FlowData
     public string? Category { get; set; }
     public List<string> Resources { get; set; } = new();
     public List<string> Prerequisites { get; set; } = new();
+    public List<BackendService.Models.Entities.ContentBlock> ContentBlocks { get; set; } = new();
+    public string? VideoUrl { get; set; }
 }
 
 public class RoadmapSummaryDto

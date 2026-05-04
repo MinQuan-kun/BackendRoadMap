@@ -237,6 +237,304 @@ namespace BackendService.Controllers
             });
         }
 
+        // ═══════════════════════════════════════════════════
+        // ═══ RECRUITER ENDPOINTS ═══════════════════════════
+        // ═══════════════════════════════════════════════════
+
+        // Tạo bài tuyển dụng (chỉ recruiter đã được duyệt)
+        [Authorize]
+        [HttpPost]
+        public async Task<ActionResult> CreateJob([FromBody] CreateJobRequestDto request)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrWhiteSpace(userId))
+            {
+                return Unauthorized();
+            }
+
+            var user = await _context.Users.Find(u => u.Id == userId).FirstOrDefaultAsync();
+            if (user == null) return NotFound("Người dùng không tồn tại.");
+            if (user.Role != 2) return Forbid();
+            if (!user.IsApproved) return BadRequest(new { message = "Tài khoản nhà tuyển dụng chưa được phê duyệt bởi Admin." });
+
+            if (string.IsNullOrWhiteSpace(request.Title))
+            {
+                return BadRequest(new { message = "Tiêu đề công việc không được để trống." });
+            }
+
+            // Xử lý Company: dùng CompanyId từ request, hoặc tự tạo Company cho recruiter
+            var companyId = request.CompanyId;
+            if (string.IsNullOrWhiteSpace(companyId))
+            {
+                // Tìm company mà recruiter quản lý
+                var existingCompany = await _context.Companies
+                    .Find(c => c.AdminIds.Contains(userId))
+                    .FirstOrDefaultAsync();
+
+                if (existingCompany != null)
+                {
+                    companyId = existingCompany.Id;
+                }
+                else
+                {
+                    // Tạo company mới cho recruiter
+                    var newCompany = new Company
+                    {
+                        CompanyName = user.FullName ?? user.UserName,
+                        AdminIds = new List<string> { userId }
+                    };
+                    await _context.Companies.InsertOneAsync(newCompany);
+                    companyId = newCompany.Id;
+                }
+            }
+
+            var job = new Job
+            {
+                Title = request.Title.Trim(),
+                Description = request.Description,
+                Location = request.Location,
+                Salary = request.Salary,
+                Skills = request.Skills,
+                ExperienceLevel = request.ExperienceLevel,
+                TargetRoadmapId = request.TargetRoadmapId ?? string.Empty,
+                CompanyId = companyId!,
+                CreatorId = userId,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            await _context.Jobs.InsertOneAsync(job);
+
+            return CreatedAtAction(nameof(GetJobById), new { id = job.Id }, new
+            {
+                message = "Tạo bài tuyển dụng thành công.",
+                job = new
+                {
+                    job.Id,
+                    job.Title,
+                    job.Location,
+                    job.Salary,
+                    job.Skills,
+                    job.ExperienceLevel,
+                    job.CreatorId,
+                    job.CompanyId,
+                    job.CreatedAt
+                }
+            });
+        }
+
+        // Cập nhật bài tuyển dụng
+        [Authorize]
+        [HttpPut("{id}")]
+        public async Task<ActionResult> UpdateJob(string id, [FromBody] UpdateJobRequestDto request)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrWhiteSpace(userId))
+            {
+                return Unauthorized();
+            }
+
+            var job = await _context.Jobs.Find(j => j.Id == id).FirstOrDefaultAsync();
+            if (job == null) return NotFound("Không tìm thấy công việc.");
+
+            // Chỉ cho phép creator hoặc admin sửa
+            var user = await _context.Users.Find(u => u.Id == userId).FirstOrDefaultAsync();
+            if (user == null) return NotFound("Người dùng không tồn tại.");
+            
+            if (job.CreatorId != userId && user.Role != 0)
+            {
+                return Forbid();
+            }
+
+            if (request.Title != null) job.Title = request.Title.Trim();
+            if (request.Description != null) job.Description = request.Description;
+            if (request.Location != null) job.Location = request.Location;
+            if (request.Salary != null) job.Salary = request.Salary;
+            if (request.Skills != null) job.Skills = request.Skills;
+            if (request.ExperienceLevel != null) job.ExperienceLevel = request.ExperienceLevel;
+            if (request.TargetRoadmapId != null) job.TargetRoadmapId = request.TargetRoadmapId;
+
+            await _context.Jobs.ReplaceOneAsync(j => j.Id == id, job);
+
+            return Ok(new { message = "Cập nhật bài tuyển dụng thành công.", jobId = id });
+        }
+
+        // Xóa bài tuyển dụng
+        [Authorize]
+        [HttpDelete("{id}")]
+        public async Task<ActionResult> DeleteJob(string id)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrWhiteSpace(userId))
+            {
+                return Unauthorized();
+            }
+
+            var job = await _context.Jobs.Find(j => j.Id == id).FirstOrDefaultAsync();
+            if (job == null) return NotFound("Không tìm thấy công việc.");
+
+            var user = await _context.Users.Find(u => u.Id == userId).FirstOrDefaultAsync();
+            if (user == null) return NotFound("Người dùng không tồn tại.");
+
+            if (job.CreatorId != userId && user.Role != 0)
+            {
+                return Forbid();
+            }
+
+            // Xóa cả applications liên quan
+            await _context.Applications.DeleteManyAsync(a => a.JobId == id);
+            await _context.Jobs.DeleteOneAsync(j => j.Id == id);
+
+            return Ok(new { message = "Xóa bài tuyển dụng thành công.", id });
+        }
+
+        // Danh sách bài đăng của recruiter
+        [Authorize]
+        [HttpGet("my-posts")]
+        public async Task<ActionResult> GetMyPosts()
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrWhiteSpace(userId))
+            {
+                return Unauthorized();
+            }
+
+            var jobs = await _context.Jobs
+                .Find(j => j.CreatorId == userId)
+                .SortByDescending(j => j.CreatedAt)
+                .ToListAsync();
+
+            // Đếm số applications cho mỗi job
+            var jobIds = jobs.Where(j => j.Id != null).Select(j => j.Id!).ToList();
+            var allApplications = await _context.Applications
+                .Find(a => jobIds.Contains(a.JobId))
+                .ToListAsync();
+
+            var applicantCountMap = allApplications
+                .GroupBy(a => a.JobId)
+                .ToDictionary(g => g.Key, g => g.Count());
+
+            var companyIds = jobs.Select(j => j.CompanyId).Where(id => !string.IsNullOrWhiteSpace(id)).Distinct().ToList();
+            var companies = await _context.Companies
+                .Find(c => c.Id != null && companyIds.Contains(c.Id))
+                .ToListAsync();
+            var companyLookup = companies.Where(c => c.Id != null).ToDictionary(c => c.Id!, c => c);
+
+            var result = jobs.Select(job =>
+            {
+                companyLookup.TryGetValue(job.CompanyId, out var company);
+                applicantCountMap.TryGetValue(job.Id!, out var applicantCount);
+
+                return new
+                {
+                    id = job.Id,
+                    title = job.Title,
+                    description = job.Description,
+                    location = job.Location,
+                    salary = job.Salary,
+                    skills = job.Skills,
+                    experienceLevel = job.ExperienceLevel,
+                    companyName = company?.CompanyName ?? "Unknown",
+                    companyLogo = company?.LogoUrl,
+                    applicantCount,
+                    postedAt = GetRelativeTime(job.CreatedAt),
+                    createdAt = job.CreatedAt
+                };
+            }).ToList();
+
+            return Ok(new { total = result.Count, data = result });
+        }
+
+        // Danh sách ứng viên cho một job
+        [Authorize]
+        [HttpGet("{jobId}/applicants")]
+        public async Task<ActionResult> GetJobApplicants(string jobId)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrWhiteSpace(userId))
+            {
+                return Unauthorized();
+            }
+
+            var job = await _context.Jobs.Find(j => j.Id == jobId).FirstOrDefaultAsync();
+            if (job == null) return NotFound("Không tìm thấy công việc.");
+
+            // Chỉ cho creator hoặc admin xem
+            var currentUser = await _context.Users.Find(u => u.Id == userId).FirstOrDefaultAsync();
+            if (currentUser == null) return NotFound("Người dùng không tồn tại.");
+            if (job.CreatorId != userId && currentUser.Role != 0)
+            {
+                return Forbid();
+            }
+
+            var applications = await _context.Applications
+                .Find(a => a.JobId == jobId)
+                .SortByDescending(a => a.MatchingScore)
+                .ToListAsync();
+
+            var applicantIds = applications.Select(a => a.UserId).Distinct().ToList();
+            var applicants = await _context.Users
+                .Find(u => u.Id != null && applicantIds.Contains(u.Id))
+                .ToListAsync();
+            var userLookup = applicants.Where(u => u.Id != null).ToDictionary(u => u.Id!, u => u);
+
+            var result = applications.Select(app =>
+            {
+                userLookup.TryGetValue(app.UserId, out var applicant);
+                return new
+                {
+                    applicationId = app.Id,
+                    status = app.Status,
+                    matchingScore = app.MatchingScore,
+                    appliedAt = app.AppliedAt,
+                    applicant = applicant != null ? new
+                    {
+                        id = applicant.Id,
+                        userName = applicant.UserName,
+                        fullName = applicant.FullName,
+                        email = applicant.Email,
+                        avatar = applicant.avatar,
+                        skills = applicant.Skills,
+                        completedNodes = applicant.CompletedNodes.Count
+                    } : null
+                };
+            }).ToList();
+
+            return Ok(new { jobId, total = result.Count, data = result });
+        }
+
+        // Cập nhật trạng thái ứng viên (Accepted / Rejected)
+        [Authorize]
+        [HttpPut("{jobId}/applicants/{applicationId}/status")]
+        public async Task<ActionResult> UpdateApplicationStatus(string jobId, string applicationId, [FromBody] UpdateApplicationStatusDto request)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrWhiteSpace(userId)) return Unauthorized();
+
+            var job = await _context.Jobs.Find(j => j.Id == jobId).FirstOrDefaultAsync();
+            if (job == null) return NotFound("Không tìm thấy công việc.");
+
+            var currentUser = await _context.Users.Find(u => u.Id == userId).FirstOrDefaultAsync();
+            if (currentUser == null) return NotFound();
+            if (job.CreatorId != userId && currentUser.Role != 0) return Forbid();
+
+            var application = await _context.Applications
+                .Find(a => a.Id == applicationId && a.JobId == jobId)
+                .FirstOrDefaultAsync();
+
+            if (application == null) return NotFound("Không tìm thấy đơn ứng tuyển.");
+
+            var validStatuses = new[] { "Pending", "Accepted", "Rejected", "Interview" };
+            if (!validStatuses.Contains(request.Status))
+            {
+                return BadRequest(new { message = $"Trạng thái không hợp lệ. Cho phép: {string.Join(", ", validStatuses)}" });
+            }
+
+            var update = Builders<Application>.Update.Set(a => a.Status, request.Status);
+            await _context.Applications.UpdateOneAsync(a => a.Id == applicationId, update);
+
+            return Ok(new { message = "Cập nhật trạng thái thành công.", applicationId, status = request.Status });
+        }
+
         [HttpPost("seed-samples")]
         public async Task<ActionResult> SeedSampleJobs([FromQuery] int count = 10)
         {
@@ -396,5 +694,11 @@ namespace BackendService.Controllers
             var normalized = match.Value.Replace(",", string.Empty);
             return long.TryParse(normalized, out var value) ? value : 0;
         }
+    }
+
+    // DTO nhỏ cho cập nhật trạng thái
+    public class UpdateApplicationStatusDto
+    {
+        public string Status { get; set; } = null!;
     }
 }

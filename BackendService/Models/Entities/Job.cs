@@ -1,4 +1,4 @@
-﻿using MongoDB.Bson;
+using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 
 namespace BackendService.Models.Entities
@@ -39,6 +39,11 @@ namespace BackendService.Models.Entities
 
         [BsonElement("created_at")]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+        [BsonElement("creator_id")]
+        [BsonRepresentation(BsonType.ObjectId)]
+        public string? CreatorId { get; set; }
+
         public Company? Company { get; set; }
     }
 }

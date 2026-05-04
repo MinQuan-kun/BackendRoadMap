@@ -194,7 +194,9 @@ namespace BackendService.Controllers
                         Description = n.Description,
                         Category = n.Category,
                         Resources = n.Resources,
-                        Prerequisites = n.Prerequisites
+                        Prerequisites = n.Prerequisites,
+                        ContentBlocks = n.ContentBlocks,
+                        VideoUrl = n.VideoUrl
                     }
                 }).ToList(),
                 Edges = nodesData.Where(n => n.ParentId != null && nodeIds.Contains(n.ParentId)).Select(n => new FlowEdgeDto

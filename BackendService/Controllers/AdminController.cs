@@ -52,6 +52,34 @@ namespace BackendService.Controllers
             return Ok(new { message = "Xóa tài khoản thành công." });
         }
 
+        [HttpPut("recruiters/{id}/approve")]
+        public async Task<IActionResult> ApproveRecruiter(string id)
+        {
+            var user = await _context.Users.Find(u => u.Id == id).FirstOrDefaultAsync();
+            if (user == null) return NotFound("Người dùng không tồn tại.");
+
+            if (user.Role != 2) return BadRequest("Tài khoản này không phải là nhà tuyển dụng.");
+
+            user.IsApproved = true;
+            await _context.Users.ReplaceOneAsync(u => u.Id == id, user);
+            
+            return Ok(new { message = "Đã phê duyệt tài khoản nhà tuyển dụng.", user = UserToUserResponseDto.Transform(user) });
+        }
+
+        [HttpPut("recruiters/{id}/reject")]
+        public async Task<IActionResult> RejectRecruiter(string id)
+        {
+            var user = await _context.Users.Find(u => u.Id == id).FirstOrDefaultAsync();
+            if (user == null) return NotFound("Người dùng không tồn tại.");
+
+            if (user.Role != 2) return BadRequest("Tài khoản này không phải là nhà tuyển dụng.");
+
+            user.IsApproved = false;
+            await _context.Users.ReplaceOneAsync(u => u.Id == id, user);
+            
+            return Ok(new { message = "Đã từ chối tài khoản nhà tuyển dụng.", user = UserToUserResponseDto.Transform(user) });
+        }
+
 
         [HttpGet("nodes")]
         public async Task<ActionResult<IEnumerable<Node>>> GetAllNodes()
