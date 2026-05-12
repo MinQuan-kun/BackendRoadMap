@@ -63,14 +63,18 @@ namespace BackendService.Controllers
                 }
             }
 
-            foreach (var nodeId in submission.SelectedNodeIds.ToList())
+            // Đệ quy thêm tất cả các node con (descendants) của các node đã chọn
+            var queue = new Queue<string>(submission.SelectedNodeIds);
+            while (queue.Count > 0)
             {
-                var children = allNodes.Where(n => n.ParentId == nodeId).ToList();
+                var currentId = queue.Dequeue();
+                var children = allNodes.Where(n => n.ParentId == currentId).ToList();
                 foreach (var child in children)
                 {
-                    if (child.Id != null)
+                    if (child.Id != null && !expandedNodeIds.Contains(child.Id))
                     {
                         expandedNodeIds.Add(child.Id);
+                        queue.Enqueue(child.Id);
                     }
                 }
             }

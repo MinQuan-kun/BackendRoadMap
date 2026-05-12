@@ -20,13 +20,40 @@ namespace BackendService.Controllers
             _context = context;
         }
 
-        // Lấy toàn bộ roadmap
+        // Lấy danh sách roadmap với các bộ lọc
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<RoadmapSummaryDto>>> GetAllRoadmaps([FromQuery] string? creatorId)
+        public async Task<ActionResult<IEnumerable<RoadmapSummaryDto>>> GetAllRoadmaps(
+            [FromQuery] string? creatorId, 
+            [FromQuery] string? search,
+            [FromQuery] bool includeOfficial = false,
+            [FromQuery] bool onlyOfficial = false)
         {
-            var filter = string.IsNullOrWhiteSpace(creatorId)
-                ? Builders<Roadmap>.Filter.Empty
-                : Builders<Roadmap>.Filter.Eq(r => r.CreatorId, creatorId);
+            var builder = Builders<Roadmap>.Filter;
+            var filter = builder.Empty;
+
+            if (onlyOfficial)
+            {
+                filter = builder.In(r => r.Engine, new[] { "Unity", "Unreal" });
+            }
+            else if (!string.IsNullOrWhiteSpace(creatorId))
+            {
+                var userFilter = builder.Eq(r => r.CreatorId, creatorId);
+                if (includeOfficial)
+                {
+                    var officialFilter = builder.In(r => r.Engine, new[] { "Unity", "Unreal" });
+                    filter = builder.Or(userFilter, officialFilter);
+                }
+                else
+                {
+                    filter = userFilter;
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var searchFilter = builder.Regex(r => r.Title, new BsonRegularExpression(search, "i"));
+                filter = builder.And(filter, searchFilter);
+            }
 
             var roadmaps = await _context.Roadmaps
                 .Find(filter)
@@ -42,6 +69,48 @@ namespace BackendService.Controllers
                 CreatorId = r.CreatorId,
                 CreatedAt = r.CreatedAt,
                 UpdatedAt = r.UpdatedAt
+            }).ToList();
+
+            return Ok(response);
+        }
+
+        // Lấy danh sách node có sẵn trong DB (Node Library)
+        [HttpGet("available-nodes")]
+        public async Task<ActionResult<IEnumerable<AvailableNodeDto>>> GetAvailableNodes(
+            [FromQuery] string? engine,
+            [FromQuery] string? search,
+            [FromQuery] string? category)
+        {
+            var builder = Builders<Node>.Filter;
+            var filter = builder.Empty;
+
+            if (!string.IsNullOrWhiteSpace(engine))
+            {
+                filter = builder.And(filter, builder.Eq(n => n.Engine, engine));
+            }
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                filter = builder.And(filter, builder.Regex(n => n.Name, new BsonRegularExpression(search, "i")));
+            }
+
+            if (!string.IsNullOrWhiteSpace(category))
+            {
+                filter = builder.And(filter, builder.Regex(n => n.Category, new BsonRegularExpression(category, "i")));
+            }
+
+            var nodes = await _context.Nodes.Find(filter).Limit(200).ToListAsync();
+
+            var response = nodes.Select(n => new AvailableNodeDto
+            {
+                Id = n.Id!,
+                Name = n.Name,
+                Engine = n.Engine,
+                Category = n.Category,
+                Description = n.Description,
+                ParentId = n.ParentId,
+                Resources = n.Resources,
+                HasContent = (n.ContentBlocks != null && n.ContentBlocks.Count > 0) || !string.IsNullOrWhiteSpace(n.VideoUrl),
             }).ToList();
 
             return Ok(response);
@@ -71,8 +140,8 @@ namespace BackendService.Controllers
             var roadmap = new Roadmap
             {
                 Title = request.Title.Trim(),
-                Engine = "Custom",
-                Description = "Roadmap được tạo từ Roadmap Builder",
+                Engine = request.Engine ?? "Custom",
+                Description = request.Description ?? "Roadmap được tạo từ Roadmap Builder",
                 Difficulty = "All Levels",
                 CreatorId = creatorId,
                 CreatedAt = DateTime.UtcNow,
@@ -113,6 +182,8 @@ namespace BackendService.Controllers
             roadmap.Title = request.Title.Trim();
             roadmap.CreatorId = !string.IsNullOrWhiteSpace(roadmap.CreatorId) ? roadmap.CreatorId : request.CreatorId;
             roadmap.UpdatedAt = DateTime.UtcNow;
+            roadmap.Engine = request.Engine ?? roadmap.Engine;
+            roadmap.Description = request.Description ?? roadmap.Description;
             roadmap.Difficulty = string.IsNullOrWhiteSpace(roadmap.Difficulty) ? "All Levels" : roadmap.Difficulty;
 
             var persisted = await PersistBuilderNodesAsync(request);
@@ -171,33 +242,42 @@ namespace BackendService.Controllers
         {
             var nodeIds = roadmap.NodesLayout.Select(nl => nl.NodeId).ToList();
             var nodesData = await _context.Nodes.Find(n => n.Id != null && nodeIds.Contains(n.Id)).ToListAsync();
+            var layoutLookup = roadmap.NodesLayout.ToDictionary(l => l.NodeId, l => l);
 
             return new RoadmapResponseDto
             {
                 Id = roadmap.Id!,
                 Title = roadmap.Title,
+                Engine = roadmap.Engine,
+                Description = roadmap.Description,
                 CreatorId = roadmap.CreatorId,
                 CreatedAt = roadmap.CreatedAt,
                 UpdatedAt = roadmap.UpdatedAt,
-                Nodes = nodesData.Select(n => new FlowNodeDto
+                Nodes = nodesData.Select(n =>
                 {
-                    Id = n.Id!,
-                    Type = string.IsNullOrWhiteSpace(n.Category) ? "default" : n.Category,
-                    Position = new FlowPosition
+                    layoutLookup.TryGetValue(n.Id!, out var layout);
+                    return new FlowNodeDto
                     {
-                        X = roadmap.NodesLayout.FirstOrDefault(l => l.NodeId == n.Id)?.X ?? 0,
-                        Y = roadmap.NodesLayout.FirstOrDefault(l => l.NodeId == n.Id)?.Y ?? 0
-                    },
-                    Data = new FlowData
-                    {
-                        Label = n.Name,
-                        Description = n.Description,
-                        Category = n.Category,
-                        Resources = n.Resources,
-                        Prerequisites = n.Prerequisites,
-                        ContentBlocks = n.ContentBlocks,
-                        VideoUrl = n.VideoUrl
-                    }
+                        Id = n.Id!,
+                        Type = string.IsNullOrWhiteSpace(n.Category) ? "default" : n.Category,
+                        Position = new FlowPosition
+                        {
+                            X = layout?.X ?? 0,
+                            Y = layout?.Y ?? 0
+                        },
+                        Color = layout?.Color,
+                        Style = layout?.Style,
+                        Data = new FlowData
+                        {
+                            Label = n.Name,
+                            Description = n.Description,
+                            Category = n.Category,
+                            Resources = n.Resources,
+                            Prerequisites = n.Prerequisites,
+                            ContentBlocks = n.ContentBlocks,
+                            VideoUrl = n.VideoUrl
+                        }
+                    };
                 }).ToList(),
                 Edges = nodesData.Where(n => n.ParentId != null && nodeIds.Contains(n.ParentId)).Select(n => new FlowEdgeDto
                 {
@@ -250,7 +330,11 @@ namespace BackendService.Controllers
                 {
                     NodeId = node.Id!,
                     X = builderNode.X,
-                    Y = builderNode.Y
+                    Y = builderNode.Y,
+                    Color = builderNode.Color,
+                    Width = builderNode.Width > 0 ? builderNode.Width : null,
+                    Height = builderNode.Height > 0 ? builderNode.Height : null,
+                    Style = builderNode.Style?.ToDictionary(kvp => kvp.Key, kvp => ConvertJsonElement(kvp.Value) ?? string.Empty)
                 });
             }
 
@@ -290,6 +374,26 @@ namespace BackendService.Controllers
             }
 
             return (nodesLayout, nodeIdMap);
+        }
+
+        private object? ConvertJsonElement(object? obj)
+        {
+            if (obj is System.Text.Json.JsonElement element)
+            {
+                switch (element.ValueKind)
+                {
+                    case System.Text.Json.JsonValueKind.String: return element.GetString();
+                    case System.Text.Json.JsonValueKind.Number:
+                        if (element.TryGetInt32(out var i)) return i;
+                        if (element.TryGetInt64(out var l)) return l;
+                        return element.GetDouble();
+                    case System.Text.Json.JsonValueKind.True: return true;
+                    case System.Text.Json.JsonValueKind.False: return false;
+                    case System.Text.Json.JsonValueKind.Null: return null;
+                    default: return element.GetRawText();
+                }
+            }
+            return obj;
         }
     }
 }

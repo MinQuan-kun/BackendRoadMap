@@ -3,6 +3,8 @@ public class RoadmapResponseDto
 {
     public string Id { get; set; } = null!;
     public string Title { get; set; } = null!;
+    public string? Engine { get; set; }
+    public string? Description { get; set; }
     public string? CreatorId { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
@@ -16,6 +18,8 @@ public class FlowNodeDto
     public string Type { get; set; } = "default";
     public FlowPosition Position { get; set; } = null!;
     public FlowData Data { get; set; } = null!;
+    public string? Color { get; set; }
+    public Dictionary<string, object>? Style { get; set; }
 }
 
 public class FlowEdgeDto
@@ -59,6 +63,8 @@ public class RoadmapSummaryDto
 public class SaveRoadmapRequestDto
 {
     public string Title { get; set; } = null!;
+    public string? Engine { get; set; }
+    public string? Description { get; set; }
     public string? CreatorId { get; set; }
     public List<BuilderNodeDto> Nodes { get; set; } = new();
     public List<BuilderConnectionDto> Connections { get; set; } = new();
@@ -74,6 +80,7 @@ public class BuilderNodeDto
     public double Width { get; set; }
     public double Height { get; set; }
     public string? Link { get; set; }
+    public string? Color { get; set; }
     public Dictionary<string, object>? Style { get; set; }
     public long? CreatedAt { get; set; }
     public long? UpdatedAt { get; set; }
@@ -87,3 +94,17 @@ public class BuilderConnectionDto
     public string FromPoint { get; set; } = "bottom";
     public string ToPoint { get; set; } = "top";
 }
+
+// DTO cho endpoint available-nodes (Node Library)
+public class AvailableNodeDto
+{
+    public string Id { get; set; } = null!;
+    public string Name { get; set; } = null!;
+    public string? Engine { get; set; }
+    public string? Category { get; set; }
+    public string? Description { get; set; }
+    public string? ParentId { get; set; }
+    public List<string> Resources { get; set; } = new();
+    public bool HasContent { get; set; }
+}
+

@@ -7,6 +7,7 @@ namespace BackendService.Models.DTOs.Job
         public string Location { get; set; } = string.Empty;
         public string Salary { get; set; } = string.Empty;
         public List<string> Skills { get; set; } = new();
+        public List<string>? Tags { get; set; }
         public string ExperienceLevel { get; set; } = string.Empty;
         public string? TargetRoadmapId { get; set; }
         public string? CompanyId { get; set; }
@@ -19,6 +20,7 @@ namespace BackendService.Models.DTOs.Job
         public string? Location { get; set; }
         public string? Salary { get; set; }
         public List<string>? Skills { get; set; }
+        public List<string>? Tags { get; set; }
         public string? ExperienceLevel { get; set; }
         public string? TargetRoadmapId { get; set; }
     }

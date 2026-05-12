@@ -1,4 +1,4 @@
-﻿using MongoDB.Bson;
+using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 
 namespace BackendService.Models.Entities
@@ -46,5 +46,17 @@ namespace BackendService.Models.Entities
 
         [BsonElement("y")]
         public double Y { get; set; }
+
+        [BsonElement("color")]
+        public string? Color { get; set; }
+
+        [BsonElement("width")]
+        public double? Width { get; set; }
+
+        [BsonElement("height")]
+        public double? Height { get; set; }
+
+        [BsonElement("style")]
+        public Dictionary<string, object>? Style { get; set; }
     }
 }

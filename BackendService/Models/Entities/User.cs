@@ -51,11 +51,13 @@ namespace BackendService.Models.Entities
 
         [BsonElement("completed_nodes")]
         public List<string> CompletedNodes { get; set; } = new();
+        [BsonElement("skipped_nodes")]
+        public List<string> SkippedNodes { get; set; } = new();
         [BsonElement("interested_nodes")]
         public List<string> InterestedNodes { get; set; } = new();
 
         [BsonElement("onboarding_responses")]
-        public Dictionary<string, string> OnboardingResponses { get; set; } = new();
+        public Dictionary<string, string> QuizResponses { get; set; } = new();
 
         [BsonElement("is_approved")]
         public bool IsApproved { get; set; } = false;

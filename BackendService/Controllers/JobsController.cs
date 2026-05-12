@@ -295,6 +295,7 @@ namespace BackendService.Controllers
                 Location = request.Location,
                 Salary = request.Salary,
                 Skills = request.Skills,
+                Tags = request.Tags ?? new List<string>(),
                 ExperienceLevel = request.ExperienceLevel,
                 TargetRoadmapId = request.TargetRoadmapId ?? string.Empty,
                 CompanyId = companyId!,
@@ -350,6 +351,7 @@ namespace BackendService.Controllers
             if (request.Location != null) job.Location = request.Location;
             if (request.Salary != null) job.Salary = request.Salary;
             if (request.Skills != null) job.Skills = request.Skills;
+            if (request.Tags != null) job.Tags = request.Tags;
             if (request.ExperienceLevel != null) job.ExperienceLevel = request.ExperienceLevel;
             if (request.TargetRoadmapId != null) job.TargetRoadmapId = request.TargetRoadmapId;
 
@@ -385,6 +387,221 @@ namespace BackendService.Controllers
             await _context.Jobs.DeleteOneAsync(j => j.Id == id);
 
             return Ok(new { message = "Xóa bài tuyển dụng thành công.", id });
+        }
+
+        // Tạo/Cập nhật roadmap riêng cho bài tuyển dụng
+        [Authorize]
+        [HttpPost("{id}/roadmap")]
+        public async Task<IActionResult> CreateJobRoadmap(string id, [FromBody] BackendService.Models.DTOs.SaveRoadmapRequestDto request)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrWhiteSpace(userId)) return Unauthorized();
+
+            var job = await _context.Jobs.Find(j => j.Id == id).FirstOrDefaultAsync();
+            if (job == null) return NotFound("Công việc không tồn tại.");
+
+            var user = await _context.Users.Find(u => u.Id == userId).FirstOrDefaultAsync();
+            if (job.CreatorId != userId && user?.Role != 0) return Forbid();
+
+            // Create or update roadmap
+            var roadmapId = job.TargetRoadmapId;
+            Roadmap? roadmap = null;
+
+            if (!string.IsNullOrEmpty(roadmapId))
+            {
+                roadmap = await _context.Roadmaps.Find(r => r.Id == roadmapId).FirstOrDefaultAsync();
+            }
+
+            if (roadmap == null)
+            {
+                roadmap = new Roadmap
+                {
+                    Title = request.Title ?? $"Roadmap for {job.Title}",
+                    Engine = request.Engine ?? "Custom",
+                    Description = request.Description,
+                    CreatorId = userId,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                };
+            }
+            else
+            {
+                roadmap.Title = request.Title ?? roadmap.Title;
+                roadmap.Engine = request.Engine ?? roadmap.Engine;
+                roadmap.Description = request.Description ?? roadmap.Description;
+                roadmap.UpdatedAt = DateTime.UtcNow;
+            }
+
+            var persisted = await PersistBuilderNodesAsync(request);
+            roadmap.NodesLayout = persisted.NodesLayout;
+
+            if (string.IsNullOrEmpty(roadmap.Id))
+            {
+                await _context.Roadmaps.InsertOneAsync(roadmap);
+                job.TargetRoadmapId = roadmap.Id!;
+                await _context.Jobs.ReplaceOneAsync(j => j.Id == job.Id, job);
+            }
+            else
+            {
+                await _context.Roadmaps.ReplaceOneAsync(r => r.Id == roadmap.Id, roadmap);
+            }
+
+            return Ok(new { message = "Roadmap đã được lưu và gán cho công việc", roadmapId = roadmap.Id });
+        }
+
+        private async Task<(List<NodeLayout> NodesLayout, Dictionary<string, string> NodeIdMap)> PersistBuilderNodesAsync(BackendService.Models.DTOs.SaveRoadmapRequestDto request)
+        {
+            var nodeIdMap = new Dictionary<string, string>();
+            var persistedNodes = new Dictionary<string, Node>();
+            var nodesLayout = new List<NodeLayout>();
+
+            foreach (var builderNode in request.Nodes)
+            {
+                Node? node = null;
+
+                if (!string.IsNullOrWhiteSpace(builderNode.Id) && MongoDB.Bson.ObjectId.TryParse(builderNode.Id, out _))
+                {
+                    node = await _context.Nodes.Find(n => n.Id == builderNode.Id).FirstOrDefaultAsync();
+                }
+
+                if (node == null)
+                {
+                    node = new Node();
+                }
+
+                node.Name = string.IsNullOrWhiteSpace(builderNode.Content) ? "Untitled Node" : builderNode.Content;
+                node.Engine = "Custom";
+                node.Category = string.IsNullOrWhiteSpace(builderNode.Type) ? "default" : builderNode.Type;
+                node.Description = builderNode.Link ?? string.Empty;
+                node.Resources = new List<string>();
+
+                if (string.IsNullOrWhiteSpace(node.Id))
+                {
+                    await _context.Nodes.InsertOneAsync(node);
+                }
+                else
+                {
+                    await _context.Nodes.ReplaceOneAsync(n => n.Id == node.Id, node);
+                }
+
+                nodeIdMap[builderNode.Id] = node.Id!;
+                persistedNodes[node.Id!] = node;
+
+                nodesLayout.Add(new NodeLayout
+                {
+                    NodeId = node.Id!,
+                    X = builderNode.X,
+                    Y = builderNode.Y,
+                    Color = builderNode.Color,
+                    Width = builderNode.Width > 0 ? builderNode.Width : null,
+                    Height = builderNode.Height > 0 ? builderNode.Height : null,
+                    Style = builderNode.Style
+                });
+            }
+
+            var incomingParentMap = new Dictionary<string, string>();
+            foreach (var connection in request.Connections)
+            {
+                if (!nodeIdMap.TryGetValue(connection.FromNodeId, out var sourceId) ||
+                    !nodeIdMap.TryGetValue(connection.ToNodeId, out var targetId) ||
+                    sourceId == targetId)
+                {
+                    continue;
+                }
+
+                if (!incomingParentMap.ContainsKey(targetId))
+                {
+                    incomingParentMap[targetId] = sourceId;
+                }
+            }
+
+            foreach (var kvp in persistedNodes)
+            {
+                var nodeId = kvp.Key;
+                var node = kvp.Value;
+
+                if (incomingParentMap.TryGetValue(nodeId, out var parentId))
+                {
+                    node.ParentId = parentId;
+                    node.Prerequisites = new List<string> { parentId };
+                }
+                else
+                {
+                    node.ParentId = null;
+                    node.Prerequisites = new List<string>();
+                }
+
+                await _context.Nodes.ReplaceOneAsync(n => n.Id == nodeId, node);
+            }
+
+            return (nodesLayout, nodeIdMap);
+        }
+
+        [Authorize]
+        [HttpGet("{id}/roadmap")]
+        public async Task<IActionResult> GetJobRoadmap(string id)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrWhiteSpace(userId)) return Unauthorized();
+
+            var job = await _context.Jobs.Find(j => j.Id == id).FirstOrDefaultAsync();
+            if (job == null) return NotFound("Công việc không tồn tại.");
+
+            if (string.IsNullOrEmpty(job.TargetRoadmapId)) return Ok(null);
+
+            // Fetch the roadmap from the database
+            var roadmap = await _context.Roadmaps.Find(r => r.Id == job.TargetRoadmapId).FirstOrDefaultAsync();
+            if (roadmap == null) return Ok(null);
+
+            // Manually build the Response DTO reusing logic from RoadmapsController
+            var nodeIds = roadmap.NodesLayout.Select(nl => nl.NodeId).ToList();
+            var nodesData = await _context.Nodes.Find(n => n.Id != null && nodeIds.Contains(n.Id)).ToListAsync();
+            var layoutLookup = roadmap.NodesLayout.ToDictionary(l => l.NodeId, l => l);
+
+            var responseDto = new BackendService.Models.DTOs.RoadmapResponseDto
+            {
+                Id = roadmap.Id!,
+                Title = roadmap.Title,
+                Engine = roadmap.Engine,
+                Description = roadmap.Description,
+                CreatorId = roadmap.CreatorId,
+                CreatedAt = roadmap.CreatedAt,
+                UpdatedAt = roadmap.UpdatedAt,
+                Nodes = nodesData.Select(n =>
+                {
+                    layoutLookup.TryGetValue(n.Id!, out var layout);
+                    return new BackendService.Models.DTOs.FlowNodeDto
+                    {
+                        Id = n.Id!,
+                        Type = string.IsNullOrWhiteSpace(n.Category) ? "default" : n.Category,
+                        Position = new BackendService.Models.DTOs.FlowPosition
+                        {
+                            X = layout?.X ?? 0,
+                            Y = layout?.Y ?? 0
+                        },
+                        Color = layout?.Color,
+                        Style = layout?.Style,
+                        Data = new BackendService.Models.DTOs.FlowData
+                        {
+                            Label = n.Name,
+                            Description = n.Description,
+                            Category = n.Category,
+                            Resources = n.Resources,
+                            Prerequisites = n.Prerequisites,
+                            ContentBlocks = n.ContentBlocks,
+                            VideoUrl = n.VideoUrl
+                        }
+                    };
+                }).ToList(),
+                Edges = nodesData.Where(n => n.ParentId != null && nodeIds.Contains(n.ParentId)).Select(n => new BackendService.Models.DTOs.FlowEdgeDto
+                {
+                    Id = $"e-{n.ParentId}-{n.Id}",
+                    Source = n.ParentId!,
+                    Target = n.Id!
+                }).ToList()
+            };
+
+            return Ok(responseDto);
         }
 
         // Danh sách bài đăng của recruiter

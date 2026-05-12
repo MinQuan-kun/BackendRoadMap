@@ -344,16 +344,55 @@ namespace BackendService.Controllers
             return Ok(result);
         }
 
-        [HttpPut("{id}/onboarding")]
-        public async Task<IActionResult> SaveOnboarding(string id, [FromBody] OnboardingRequest request)
+        [HttpPut("{id}/quiz")]
+        public async Task<IActionResult> SaveQuiz(string id, [FromBody] QuizRequest request)
         {
             var user = await _context.Users.Find(u => u.Id == id).FirstOrDefaultAsync();
             if (user == null) return NotFound("Người dùng không tồn tại.");
 
-            user.OnboardingResponses = request.Responses;
+            user.QuizResponses = request.Responses;
 
             await _context.Users.ReplaceOneAsync(u => u.Id == id, user);
             return Ok(new { message = "Lưu khảo sát thành công", data = UserToUserResponseDto.Transform(user) });
+        }
+
+        [HttpPost("progress")]
+        [Authorize]
+        public async Task<IActionResult> UpdateProgress([FromBody] UpdateProgressRequestDto request)
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Unauthorized();
+            }
+
+            var user = await _context.Users.Find(u => u.Id == userId).FirstOrDefaultAsync();
+            if (user == null)
+            {
+                return NotFound("Người dùng không tồn tại.");
+            }
+
+            var nodeId = request.NodeId;
+            var status = request.Status?.ToLower();
+
+            user.CompletedNodes ??= new List<string>();
+            user.SkippedNodes ??= new List<string>();
+
+            user.CompletedNodes.Remove(nodeId);
+            user.SkippedNodes.Remove(nodeId);
+
+            if (status == "completed")
+            {
+                user.CompletedNodes.Add(nodeId);
+            }
+            else if (status == "skipped")
+            {
+                user.SkippedNodes.Add(nodeId);
+            }
+
+            await _context.Users.ReplaceOneAsync(u => u.Id == userId, user);
+
+            return Ok(new { message = "Cập nhật tiến trình thành công", data = new { completed = user.CompletedNodes, skipped = user.SkippedNodes } });
         }
     }
 }

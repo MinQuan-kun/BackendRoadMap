@@ -29,7 +29,10 @@ namespace BackendService.Mapping
                 } : null,
                 Skills = user.Skills,
                 CompletedNodes = user.CompletedNodes,
-                OnboardingResponses = user.OnboardingResponses,
+                SkippedNodes = user.SkippedNodes,
+                InterestedNodes = user.InterestedNodes,
+                QuizResponses = user.QuizResponses,
+                HasCompletedQuiz = (user.InterestedNodes != null && user.InterestedNodes.Count > 0) || (user.QuizResponses != null && user.QuizResponses.Count > 0),
                 IsApproved = user.IsApproved
             };
         }

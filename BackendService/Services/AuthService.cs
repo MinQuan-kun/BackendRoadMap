@@ -40,6 +40,12 @@ namespace BackendService.Services
         public async Task<AuthResponseDto?> LoginAsync(LoginRequestDto request, CancellationToken cancellationToken = default)
         {
             var user = await _userRepository.GetByEmailAsync(request.Email, cancellationToken);
+            
+            if (user == null)
+            {
+                user = await _userRepository.GetByUserNameAsync(request.Email, cancellationToken);
+            }
+
             if (user == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.Password))
             {
                 return null;
@@ -49,7 +55,6 @@ namespace BackendService.Services
             return new AuthResponseDto
             {
                 Token = token,
-                //User = Mapping.UserToUserResponseDto.Transform(user)
             };
         }
     }

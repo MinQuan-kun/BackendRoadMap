@@ -8,7 +8,8 @@ public class CreateUserRequest
     public string Email { get; set; } = string.Empty;
     public int Role { get; set; } = 1;
     public List<string>? CompletedNodes { get; set; }
-    public Dictionary<string, string>? OnboardingResponses { get; set; }
+    public List<string>? InterestedNodes { get; set; }
+    public Dictionary<string, string>? QuizResponses { get; set; }
 }
 
 public class UpdateUserRequest
@@ -19,6 +20,7 @@ public class UpdateUserRequest
     public string? Email { get; set; }
     public int? Role { get; set; }
     public List<string>? CompletedNodes { get; set; }
-    public Dictionary<string, string>? OnboardingResponses { get; set; }
+    public List<string>? InterestedNodes { get; set; }
+    public Dictionary<string, string>? QuizResponses { get; set; }
 }
 

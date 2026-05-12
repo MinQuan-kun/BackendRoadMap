@@ -28,6 +28,9 @@ namespace BackendService.Models.Entities
         [BsonElement("skills")]
         public List<string> Skills { get; set; } = new();
 
+        [BsonElement("tags")]
+        public List<string> Tags { get; set; } = new();
+
         [BsonElement("experience_level")]
         public string ExperienceLevel { get; set; } = string.Empty;
 

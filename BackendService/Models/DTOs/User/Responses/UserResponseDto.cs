@@ -16,7 +16,10 @@ namespace BackendService.Models.DTOs.User.Responses
         public UserLinksDto? Links { get; set; }
         public List<string> Skills { get; set; } = new();
         public List<string> CompletedNodes { get; set; } = new();
-        public Dictionary<string, string> OnboardingResponses { get; set; } = new();
+        public List<string> SkippedNodes { get; set; } = new();
+        public List<string> InterestedNodes { get; set; } = new();
+        public Dictionary<string, string> QuizResponses { get; set; } = new();
+        public bool HasCompletedQuiz { get; set; }
         public bool IsApproved { get; set; }
     }
 
