@@ -46,7 +46,7 @@ namespace BackendService.Services
                 user = await _userRepository.GetByUserNameAsync(request.Email, cancellationToken);
             }
 
-            if (user == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
+            if (user == null || string.IsNullOrEmpty(user.PasswordHash) || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
             {
                 return null;
             }

@@ -5,6 +5,10 @@ using BackendService.Data;
 using BackendService.Models.Entities;
 using BackendService.Models.DTOs.User.Responses;
 using BackendService.Mapping;
+using Microsoft.Extensions.Options;
+using BackendService.Configurations;
+using BackendService.Services.Interface;
+using BackendService.Models.DTOs.Admin;
 
 namespace BackendService.Controllers
 {
@@ -14,10 +18,23 @@ namespace BackendService.Controllers
     public class AdminController : ControllerBase
     {
         private readonly MongoDbContext _context;
+        private readonly ICloudinaryService _cloudinaryService;
+        private readonly string _baseFolder;
 
-        public AdminController(MongoDbContext context)
+        public AdminController(MongoDbContext context, ICloudinaryService cloudinaryService, IOptions<CloudinarySettings> config)
         {
             _context = context;
+            _cloudinaryService = cloudinaryService;
+            _baseFolder = config.Value.BaseFolder;
+        }
+
+        [HttpPost("upload")]
+        public async Task<IActionResult> UploadImage(IFormFile file, [FromQuery] string subFolder = "general")
+        {
+            var result = await _cloudinaryService.UploadImageAsync(file, subFolder);
+            if (result.Error != null) return BadRequest(result.Error.Message);
+
+            return Ok(new { url = result.SecureUrl.ToString(), publicId = result.PublicId });
         }
 
         [HttpGet("users")]
@@ -79,6 +96,74 @@ namespace BackendService.Controllers
         public async Task<ActionResult<Pathway>> CreatePathway([FromBody] Pathway pathway)
         {
             pathway.Id = null;
+            await _context.Pathways.InsertOneAsync(pathway);
+            return Ok(pathway);
+        }
+
+        [HttpPost("pathways/full")]
+        public async Task<ActionResult<Pathway>> CreateFullPathway([FromBody] FullPathwayRequestDto request)
+        {
+            var courseIds = new List<string>();
+
+            // 1. Create Courses, Modules, and Lessons
+            int courseOrder = 0;
+            foreach (var cReq in request.Courses)
+            {
+                var moduleIds = new List<string>();
+                int moduleOrder = 0;
+
+                foreach (var mReq in cReq.Modules)
+                {
+                    var lessonIds = new List<string>();
+                    foreach (var lName in mReq.Lessons)
+                    {
+                        var lesson = new Lesson
+                        {
+                            Title = lName,
+                            Description = $"Nội dung bài học {lName} đang được cập nhật...",
+                            Difficulty = "easy",
+                            XPReward = 10
+                        };
+                        await _context.Lessons.InsertOneAsync(lesson);
+                        lessonIds.Add(lesson.Id!);
+                    }
+
+                    var module = new Module
+                    {
+                        Title = mReq.Title,
+                        Description = mReq.Description,
+                        Order = moduleOrder++,
+                        LessonIds = lessonIds
+                    };
+                    await _context.Modules.InsertOneAsync(module);
+                    moduleIds.Add(module.Id!);
+                }
+
+                var course = new Course
+                {
+                    Title = cReq.Title,
+                    Description = cReq.Description,
+                    Order = courseOrder++,
+                    ModuleIds = moduleIds
+                };
+                await _context.Courses.InsertOneAsync(course);
+                courseIds.Add(course.Id!);
+            }
+
+            // 2. Create the Pathway
+            var pathway = new Pathway
+            {
+                Title = request.Title,
+                Slug = request.Slug,
+                Description = request.Description,
+                Thumbnail = request.Thumbnail,
+                Difficulty = request.Difficulty,
+                EstimatedHours = request.EstimatedHours,
+                Tags = request.Tags,
+                IsOfficial = request.IsOfficial,
+                CourseIds = courseIds
+            };
+
             await _context.Pathways.InsertOneAsync(pathway);
             return Ok(pathway);
         }

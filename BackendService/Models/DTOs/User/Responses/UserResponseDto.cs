@@ -15,7 +15,7 @@ namespace BackendService.Models.DTOs.User.Responses
         public string? CoverUrl { get; set; }
         public string? Phone { get; set; }
         public string? Address { get; set; }
-        public DateTime? BirthDate { get; set; }
+        public string? BirthDate { get; set; }
         public UserLinksDto? Links { get; set; }
         public List<string> SkillTags { get; set; } = new();
         public bool IsRecruiterVerified { get; set; }

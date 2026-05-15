@@ -52,7 +52,7 @@ namespace BackendService.Models.Entities
         public string? Address { get; set; }
 
         [BsonElement("birth_date")]
-        public DateTime? BirthDate { get; set; }
+        public string? BirthDate { get; set; }
 
         // =========================
         // SOCIAL LINKS
@@ -100,9 +100,9 @@ namespace BackendService.Models.Entities
 
     public enum UserRole
     {
+        Admin = 0,
         User = 1,
-        Recruiter = 2,
-        Admin = 3
+        Recruiter = 2
     }
 
     public enum UserStatus

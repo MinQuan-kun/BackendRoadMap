@@ -18,6 +18,7 @@ namespace BackendService.Mapping
                 AvatarUrl = user.AvatarUrl,
                 Phone = user.Phone,
                 Address = user.Address,
+                BirthDate = user.BirthDate,
                 SkillTags = user.SkillTags
             };
         }

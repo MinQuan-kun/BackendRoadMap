@@ -1,5 +1,6 @@
 using BackendService.Configurations;
 using BackendService.Models.Entities;
+using BackendService.Models.Entities.Recruitment;
 using Microsoft.Extensions.Options;
 using MongoDB.Bson;
 using MongoDB.Driver;

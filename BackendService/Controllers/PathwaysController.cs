@@ -42,6 +42,10 @@ namespace BackendService.Controllers
         public async Task<ActionResult<PathwayDto>> GetPathwayBySlug(string slug)
         {
             var pathway = await _context.Pathways.Find(p => p.Slug == slug).FirstOrDefaultAsync();
+            if (pathway == null && slug.Length == 24 && System.Text.RegularExpressions.Regex.IsMatch(slug, @"^[0-9a-fA-F]{24}$"))
+            {
+                pathway = await _context.Pathways.Find(p => p.Id == slug).FirstOrDefaultAsync();
+            }
             if (pathway == null) return NotFound();
 
             return Ok(new PathwayDto
@@ -63,6 +67,10 @@ namespace BackendService.Controllers
         public async Task<ActionResult> GetPathwayContent(string slug)
         {
             var pathway = await _context.Pathways.Find(p => p.Slug == slug).FirstOrDefaultAsync();
+            if (pathway == null && slug.Length == 24 && System.Text.RegularExpressions.Regex.IsMatch(slug, @"^[0-9a-fA-F]{24}$"))
+            {
+                pathway = await _context.Pathways.Find(p => p.Id == slug).FirstOrDefaultAsync();
+            }
             if (pathway == null) return NotFound();
 
             var courses = await _context.Courses.Find(c => pathway.CourseIds.Contains(c.Id!)).SortBy(c => c.Order).ToListAsync();
