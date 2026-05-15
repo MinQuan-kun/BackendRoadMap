@@ -31,7 +31,7 @@ namespace BackendService.Services
                 throw new Exception("Tên đăng nhập này đã tồn tại.");
             }
             var mappedUser = RegisterRequestDtoToUser.Transform(request);
-            mappedUser.Password = BCrypt.Net.BCrypt.HashPassword(request.Password);
+            mappedUser.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
             var user = await _userRepository.CreateAsync(mappedUser, cancellationToken);
             var responseUser = UserToRegisterResponseDto.Transform(user);
             return responseUser;

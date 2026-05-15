@@ -10,29 +10,40 @@ namespace BackendService.Models.Entities
         [BsonRepresentation(BsonType.ObjectId)]
         public string? Id { get; set; }
 
+        // =========================
+        // AUTH
+        // =========================
+
         [BsonElement("user_name")]
         public string UserName { get; set; } = string.Empty;
-
-        [BsonElement("password")]
-        public string Password { get; set; } = null!;
-
-        [BsonElement("full_name")]
-        public string? FullName { get; set; }
 
         [BsonElement("email")]
         public string Email { get; set; } = string.Empty;
 
+        [BsonElement("password_hash")]
+        public string PasswordHash { get; set; } = string.Empty;
+
         [BsonElement("role")]
-        public int Role { get; set; } = 1;
+        public UserRole Role { get; set; } = UserRole.User;
+
+        [BsonElement("status")]
+        public UserStatus Status { get; set; } = UserStatus.Active;
+
+        // =========================
+        // PROFILE
+        // =========================
+
+        [BsonElement("display_name")]
+        public string? DisplayName { get; set; }
 
         [BsonElement("bio")]
-        public string bio { get; set; } = null!;
+        public string? Bio { get; set; }
+
         [BsonElement("avatar_url")]
-        public string? avatar { get; set; } = null;
+        public string? AvatarUrl { get; set; }
+
         [BsonElement("cover_url")]
-        public string? CoverUrl { get; set; } = null;
-        [BsonElement("create_at")]
-        public DateTime? CreateAt { get; set; } = null;
+        public string? CoverUrl { get; set; }
 
         [BsonElement("phone")]
         public string? Phone { get; set; }
@@ -41,26 +52,34 @@ namespace BackendService.Models.Entities
         public string? Address { get; set; }
 
         [BsonElement("birth_date")]
-        public string? BirthDate { get; set; }
+        public DateTime? BirthDate { get; set; }
+
+        // =========================
+        // SOCIAL LINKS
+        // =========================
 
         [BsonElement("links")]
         public UserLinks Links { get; set; } = new();
 
-        [BsonElement("skills")]
-        public List<string> Skills { get; set; } = new();
+        // =========================
+        // SKILLS
+        // =========================
 
-        [BsonElement("completed_nodes")]
-        public List<string> CompletedNodes { get; set; } = new();
-        [BsonElement("skipped_nodes")]
-        public List<string> SkippedNodes { get; set; } = new();
-        [BsonElement("interested_nodes")]
-        public List<string> InterestedNodes { get; set; } = new();
+        [BsonElement("skill_tags")]
+        public List<string> SkillTags { get; set; } = new();
 
-        [BsonElement("onboarding_responses")]
-        public Dictionary<string, string> QuizResponses { get; set; } = new();
+        // =========================
+        // SYSTEM
+        // =========================
 
-        [BsonElement("is_approved")]
-        public bool IsApproved { get; set; } = false;
+        [BsonElement("is_recruiter_verified")]
+        public bool IsRecruiterVerified { get; set; } = false;
+
+        [BsonElement("created_at")]
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+        [BsonElement("updated_at")]
+        public DateTime? UpdatedAt { get; set; }
     }
 
     [BsonIgnoreExtraElements]
@@ -77,5 +96,19 @@ namespace BackendService.Models.Entities
 
         [BsonElement("facebook")]
         public string? Facebook { get; set; }
+    }
+
+    public enum UserRole
+    {
+        User = 1,
+        Recruiter = 2,
+        Admin = 3
+    }
+
+    public enum UserStatus
+    {
+        Active = 1,
+        Suspended = 2,
+        Banned = 3
     }
 }

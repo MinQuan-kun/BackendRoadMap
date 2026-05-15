@@ -12,14 +12,13 @@ namespace BackendService.Mapping
                 Id = user.Id,
                 UserName = user.UserName,
                 Email = user.Email,
-                AvatarUrl = user.avatar,
-                Fullname = user.FullName,    
-                Bio = user.bio,
+                DisplayName = user.DisplayName,
                 Role = user.Role,
+                Bio = user.Bio,
+                AvatarUrl = user.AvatarUrl,
                 Phone = user.Phone,
                 Address = user.Address,
-                Skills = user.Skills,
-                CompletedNodes = user.CompletedNodes
+                SkillTags = user.SkillTags
             };
         }
     }

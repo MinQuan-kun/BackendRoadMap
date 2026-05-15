@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Authorization;
 using MongoDB.Driver;
 using BackendService.Data;
 using BackendService.Models.Entities;
-using BackendService.Models.DTOs;
 using BackendService.Models.DTOs.User.Responses;
 using BackendService.Mapping;
 
@@ -29,21 +28,6 @@ namespace BackendService.Controllers
             return Ok(response);
         }
 
-        [HttpPut("users/{id}")]
-        public async Task<IActionResult> UpdateUser(string id, [FromBody] UpdateUserRequest request)
-        {
-            var user = await _context.Users.Find(u => u.Id == id).FirstOrDefaultAsync();
-            if (user == null) return NotFound("Người dùng không tồn tại.");
-
-            if (request.UserName != null) user.UserName = request.UserName;
-            if (request.FullName != null) user.FullName = request.FullName;
-            if (request.Email != null) user.Email = request.Email;
-            if (request.Role.HasValue) user.Role = request.Role.Value;
-
-            await _context.Users.ReplaceOneAsync(u => u.Id == id, user);
-            return Ok(UserToUserResponseDto.Transform(user));
-        }
-
         [HttpDelete("users/{id}")]
         public async Task<IActionResult> DeleteUser(string id)
         {
@@ -52,98 +36,146 @@ namespace BackendService.Controllers
             return Ok(new { message = "Xóa tài khoản thành công." });
         }
 
-        [HttpPut("recruiters/{id}/approve")]
+        [HttpPost("users/{id}/approve-recruiter")]
         public async Task<IActionResult> ApproveRecruiter(string id)
         {
-            var user = await _context.Users.Find(u => u.Id == id).FirstOrDefaultAsync();
-            if (user == null) return NotFound("Người dùng không tồn tại.");
-
-            if (user.Role != 2) return BadRequest("Tài khoản này không phải là nhà tuyển dụng.");
-
-            user.IsApproved = true;
-            await _context.Users.ReplaceOneAsync(u => u.Id == id, user);
-            
-            return Ok(new { message = "Đã phê duyệt tài khoản nhà tuyển dụng.", user = UserToUserResponseDto.Transform(user) });
+            var update = Builders<User>.Update.Set(u => u.Role, UserRole.Recruiter);
+            await _context.Users.UpdateOneAsync(u => u.Id == id, update);
+            return Ok(new { message = "Đã duyệt quyền Nhà tuyển dụng." });
         }
 
-        [HttpPut("recruiters/{id}/reject")]
+        [HttpPost("users/{id}/reject-recruiter")]
         public async Task<IActionResult> RejectRecruiter(string id)
         {
-            var user = await _context.Users.Find(u => u.Id == id).FirstOrDefaultAsync();
-            if (user == null) return NotFound("Người dùng không tồn tại.");
-
-            if (user.Role != 2) return BadRequest("Tài khoản này không phải là nhà tuyển dụng.");
-
-            user.IsApproved = false;
-            await _context.Users.ReplaceOneAsync(u => u.Id == id, user);
-            
-            return Ok(new { message = "Đã từ chối tài khoản nhà tuyển dụng.", user = UserToUserResponseDto.Transform(user) });
-        }
-
-
-        [HttpGet("nodes")]
-        public async Task<ActionResult<IEnumerable<Node>>> GetAllNodes()
-        {
-            var nodes = await _context.Nodes.Find(_ => true).ToListAsync();
-            return Ok(nodes);
-        }
-
-        [HttpGet("nodes/{id}")]
-        public async Task<ActionResult<Node>> GetNodeById(string id)
-        {
-            var node = await _context.Nodes.Find(n => n.Id == id).FirstOrDefaultAsync();
-            if (node == null) return NotFound("Node không tồn tại.");
-            return Ok(node);
-        }
-
-        [HttpPost("nodes")]
-        public async Task<ActionResult<Node>> CreateNode([FromBody] Node node)
-        {
-            node.Id = null;
-            await _context.Nodes.InsertOneAsync(node);
-            return CreatedAtAction(nameof(GetNodeById), new { id = node.Id }, node);
-        }
-
-        [HttpPut("nodes/{id}")]
-        public async Task<IActionResult> UpdateNode(string id, [FromBody] Node updatedNode)
-        {
-            var existing = await _context.Nodes.Find(n => n.Id == id).FirstOrDefaultAsync();
-            if (existing == null) return NotFound("Node không tồn tại.");
-
-            updatedNode.Id = id;
-            await _context.Nodes.ReplaceOneAsync(n => n.Id == id, updatedNode);
-            return Ok(updatedNode);
-        }
-
-        [HttpDelete("nodes/{id}")]
-        public async Task<IActionResult> DeleteNode(string id)
-        {
-            var result = await _context.Nodes.DeleteOneAsync(n => n.Id == id);
-            if (result.DeletedCount == 0) return NotFound("Node không tồn tại.");
-            return Ok(new { message = "Xóa node thành công." });
-        }
-
-        [HttpDelete("roadmaps/{id}")]
-        public async Task<IActionResult> DeleteRoadmap(string id)
-        {
-            var result = await _context.Roadmaps.DeleteOneAsync(r => r.Id == id);
-            if (result.DeletedCount == 0) return NotFound("Roadmap không tồn tại.");
-            return Ok(new { message = "Xóa roadmap thành công." });
+            var update = Builders<User>.Update.Set(u => u.Role, UserRole.User);
+            await _context.Users.UpdateOneAsync(u => u.Id == id, update);
+            return Ok(new { message = "Đã từ chối quyền Nhà tuyển dụng." });
         }
 
         [HttpGet("stats")]
         public async Task<IActionResult> GetStats()
         {
             var totalUsers = await _context.Users.CountDocumentsAsync(_ => true);
-            var totalRoadmaps = await _context.Roadmaps.CountDocumentsAsync(_ => true);
-            var totalNodes = await _context.Nodes.CountDocumentsAsync(_ => true);
+            var totalPathways = await _context.Pathways.CountDocumentsAsync(_ => true);
+            var totalCourses = await _context.Courses.CountDocumentsAsync(_ => true);
+            var totalLessons = await _context.Lessons.CountDocumentsAsync(_ => true);
 
             return Ok(new
             {
                 totalUsers,
-                totalRoadmaps,
-                totalNodes
+                totalPathways,
+                totalCourses,
+                totalLessons
             });
+        }
+
+        [HttpGet("pathways")]
+        public async Task<ActionResult<IEnumerable<Pathway>>> GetAllPathways() { return Ok(await _context.Pathways.Find(_ => true).ToListAsync()); }
+
+        [HttpGet("pathways/{id}")]
+        public async Task<ActionResult<Pathway>> GetPathwayById(string id) { return Ok(await _context.Pathways.Find(p => p.Id == id).FirstOrDefaultAsync()); }
+
+        [HttpPost("pathways")]
+        public async Task<ActionResult<Pathway>> CreatePathway([FromBody] Pathway pathway)
+        {
+            pathway.Id = null;
+            await _context.Pathways.InsertOneAsync(pathway);
+            return Ok(pathway);
+        }
+
+        [HttpPut("pathways/{id}")]
+        public async Task<IActionResult> UpdatePathway(string id, [FromBody] Pathway pathway)
+        {
+            await _context.Pathways.ReplaceOneAsync(p => p.Id == id, pathway);
+            return Ok();
+        }
+
+        [HttpDelete("pathways/{id}")]
+        public async Task<IActionResult> DeletePathway(string id)
+        {
+            await _context.Pathways.DeleteOneAsync(p => p.Id == id);
+            return Ok();
+        }
+
+        // --- Courses ---
+        [HttpGet("courses")]
+        public async Task<ActionResult<IEnumerable<Course>>> GetAllCourses() { return Ok(await _context.Courses.Find(_ => true).ToListAsync()); }
+
+        [HttpGet("courses/{id}")]
+        public async Task<ActionResult<Course>> GetCourseById(string id) { return Ok(await _context.Courses.Find(c => c.Id == id).FirstOrDefaultAsync()); }
+
+        [HttpPost("courses")]
+        public async Task<ActionResult<Course>> CreateCourse([FromBody] Course course)
+        {
+            course.Id = null;
+            await _context.Courses.InsertOneAsync(course);
+            return Ok(course);
+        }
+
+        [HttpPut("courses/{id}")]
+        public async Task<IActionResult> UpdateCourse(string id, [FromBody] Course course)
+        {
+            await _context.Courses.ReplaceOneAsync(c => c.Id == id, course);
+            return Ok();
+        }
+
+        [HttpDelete("courses/{id}")]
+        public async Task<IActionResult> DeleteCourse(string id)
+        {
+            await _context.Courses.DeleteOneAsync(c => c.Id == id);
+            return Ok();
+        }
+
+        // --- Modules ---
+        [HttpGet("modules/{id}")]
+        public async Task<ActionResult<Module>> GetModuleById(string id) { return Ok(await _context.Modules.Find(m => m.Id == id).FirstOrDefaultAsync()); }
+
+        [HttpPost("modules")]
+        public async Task<ActionResult<Module>> CreateModule([FromBody] Module module)
+        {
+            module.Id = null;
+            await _context.Modules.InsertOneAsync(module);
+            return Ok(module);
+        }
+
+        [HttpPut("modules/{id}")]
+        public async Task<IActionResult> UpdateModule(string id, [FromBody] Module module)
+        {
+            await _context.Modules.ReplaceOneAsync(m => m.Id == id, module);
+            return Ok();
+        }
+
+        [HttpDelete("modules/{id}")]
+        public async Task<IActionResult> DeleteModule(string id)
+        {
+            await _context.Modules.DeleteOneAsync(m => m.Id == id);
+            return Ok();
+        }
+
+        // --- Lessons ---
+        [HttpGet("lessons/{id}")]
+        public async Task<ActionResult<Lesson>> GetLessonById(string id) { return Ok(await _context.Lessons.Find(l => l.Id == id).FirstOrDefaultAsync()); }
+
+        [HttpPost("lessons")]
+        public async Task<ActionResult<Lesson>> CreateLesson([FromBody] Lesson lesson)
+        {
+            lesson.Id = null;
+            await _context.Lessons.InsertOneAsync(lesson);
+            return Ok(lesson);
+        }
+
+        [HttpPut("lessons/{id}")]
+        public async Task<IActionResult> UpdateLesson(string id, [FromBody] Lesson lesson)
+        {
+            await _context.Lessons.ReplaceOneAsync(l => l.Id == id, lesson);
+            return Ok();
+        }
+
+        [HttpDelete("lessons/{id}")]
+        public async Task<IActionResult> DeleteLesson(string id)
+        {
+            await _context.Lessons.DeleteOneAsync(l => l.Id == id);
+            return Ok();
         }
     }
 }

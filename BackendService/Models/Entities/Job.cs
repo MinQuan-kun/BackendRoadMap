@@ -1,52 +1,43 @@
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 
-namespace BackendService.Models.Entities
+namespace BackendService.Models.Entities.Recruitment
 {
+    [BsonIgnoreExtraElements]
     public class Job
     {
         [BsonId]
         [BsonRepresentation(BsonType.ObjectId)]
         public string? Id { get; set; }
 
-        [BsonElement("company_id")]
-        [BsonRepresentation(BsonType.ObjectId)]
-        public string CompanyId { get; set; } = null!;
+        [BsonElement("recruiter_id")]
+        public string RecruiterId { get; set; } = string.Empty;
 
         [BsonElement("title")]
         public string Title { get; set; } = string.Empty;
 
         [BsonElement("description")]
-        public string Description { get; set; } = string.Empty;
+        public string? Description { get; set; }
+
+        [BsonElement("company_name")]
+        public string CompanyName { get; set; } = string.Empty;
 
         [BsonElement("location")]
-        public string Location { get; set; } = string.Empty;
+        public string? Location { get; set; }
 
-        [BsonElement("salary")]
-        public string Salary { get; set; } = string.Empty;
+        [BsonElement("job_type")]
+        public string JobType { get; set; } = "remote";
 
-        [BsonElement("skills")]
-        public List<string> Skills { get; set; } = new();
+        [BsonElement("required_skill_tags")]
+        public List<string> RequiredSkillTags { get; set; } = new();
 
-        [BsonElement("tags")]
-        public List<string> Tags { get; set; } = new();
+        [BsonElement("required_course_ids")]
+        public List<string> RequiredCourseIds { get; set; } = new();
 
-        [BsonElement("experience_level")]
-        public string ExperienceLevel { get; set; } = string.Empty;
-
-        [BsonElement("target_roadmap_id")]
-        public string TargetRoadmapId { get; set; } = null!;
-
-        [BsonElement("matching_rate")]
-        public double MatchingRate { get; set; }
+        [BsonElement("roadmap_graph_id")]
+        public string? RoadmapGraphId { get; set; }
 
         [BsonElement("created_at")]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-
-        [BsonElement("creator_id")]
-        [BsonRepresentation(BsonType.ObjectId)]
-        public string? CreatorId { get; set; }
-
-        public Company? Company { get; set; }
     }
 }

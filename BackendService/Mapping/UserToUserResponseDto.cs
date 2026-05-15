@@ -11,11 +11,12 @@ namespace BackendService.Mapping
             {
                 Id = user.Id,
                 UserName = user.UserName,
-                FullName = user.FullName,
+                DisplayName = user.DisplayName,
                 Email = user.Email,
                 Role = user.Role,
-                Bio = user.bio,
-                AvatarUrl = user.avatar,
+                Status = user.Status,
+                Bio = user.Bio,
+                AvatarUrl = user.AvatarUrl,
                 CoverUrl = user.CoverUrl,
                 Phone = user.Phone,
                 Address = user.Address,
@@ -27,13 +28,9 @@ namespace BackendService.Mapping
                     LinkedIn = user.Links.LinkedIn,
                     Facebook = user.Links.Facebook
                 } : null,
-                Skills = user.Skills,
-                CompletedNodes = user.CompletedNodes,
-                SkippedNodes = user.SkippedNodes,
-                InterestedNodes = user.InterestedNodes,
-                QuizResponses = user.QuizResponses,
-                HasCompletedQuiz = (user.InterestedNodes != null && user.InterestedNodes.Count > 0) || (user.QuizResponses != null && user.QuizResponses.Count > 0),
-                IsApproved = user.IsApproved
+                SkillTags = user.SkillTags,
+                IsRecruiterVerified = user.IsRecruiterVerified,
+                CreatedAt = user.CreatedAt
             };
         }
     }

@@ -1,4 +1,4 @@
-﻿using BackendService.Configurations;
+using BackendService.Configurations;
 using BackendService.Models.Entities;
 using Microsoft.Extensions.Options;
 using MongoDB.Bson;
@@ -26,13 +26,36 @@ namespace BackendService.Data
             }
         }
 
+        public IMongoCollection<T> GetCollection<T>(string name)
+        {
+            return _database.GetCollection<T>(name);
+        }
+
         public IMongoCollection<User> Users => _database.GetCollection<User>("Users");
+
+        // Learning Collection
+        public IMongoCollection<Pathway> Pathways => _database.GetCollection<Pathway>("Pathways");
+        public IMongoCollection<Course> Courses => _database.GetCollection<Course>("Courses");
+        public IMongoCollection<Module> Modules => _database.GetCollection<Module>("Modules");
+        public IMongoCollection<Lesson> Lessons => _database.GetCollection<Lesson>("Lessons");
+        public IMongoCollection<LearningTask> Tasks => _database.GetCollection<LearningTask>("Tasks");
+
+        // Roadmap Collection
+        public IMongoCollection<RoadmapGraph> RoadmapGraphs => _database.GetCollection<RoadmapGraph>("RoadmapGraphs");
+        public IMongoCollection<RoadmapNode> RoadmapNodes => _database.GetCollection<RoadmapNode>("RoadmapNodes");
+        public IMongoCollection<RoadmapEdge> RoadmapEdges => _database.GetCollection<RoadmapEdge>("RoadmapEdges");
+
+        // Assessment Collection
+        public IMongoCollection<CareerQuiz> CareerQuizzes => _database.GetCollection<CareerQuiz>("CareerQuizzes");
+        public IMongoCollection<CareerQuestion> CareerQuestions => _database.GetCollection<CareerQuestion>("CareerQuestions");
+        public IMongoCollection<CareerQuizResult> CareerQuizResults => _database.GetCollection<CareerQuizResult>("CareerQuizResults");
+
+        // Progression Collection
+        public IMongoCollection<UserProgress> UserProgress => _database.GetCollection<UserProgress>("UserProgress");
+
+        // Career Collection
         public IMongoCollection<Job> Jobs => _database.GetCollection<Job>("Jobs");
-        public IMongoCollection<Roadmap> Roadmaps => _database.GetCollection<Roadmap>("Roadmaps");
-        public IMongoCollection<Company> Companies => _database.GetCollection<Company>("Companies");
-        public IMongoCollection<Application> Applications => _database.GetCollection<Application>("Applications");
-        public IMongoCollection<QuestionBank> Questions => _database.GetCollection<QuestionBank>("QuestionBank");
-        public IMongoCollection<Node> Nodes => _database.GetCollection<Node>("Nodes");
+        public IMongoCollection<JobApplication> JobApplications => _database.GetCollection<JobApplication>("JobApplications");
 
     }
 }

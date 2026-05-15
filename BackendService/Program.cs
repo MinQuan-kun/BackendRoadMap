@@ -25,17 +25,9 @@ builder.Services.AddSingleton<MongoDbContext>();
 builder.Services.AddScoped<ICloudinaryService, CloudinaryService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
-builder.Services.AddScoped<IApplicationService, ApplicationService>();
-builder.Services.AddScoped<IJobService, JobService>();
-
-
 
 // Đăng ky Repository
 builder.Services.AddScoped<IUserRepository, UserRepository>();
-builder.Services.AddScoped<IApplicationRepository, ApplicationRepository>();
-builder.Services.AddScoped<IJobRepository, JobRepository>();
-
-
 
 
 // Đăng ký Validator

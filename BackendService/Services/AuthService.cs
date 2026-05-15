@@ -28,7 +28,7 @@ namespace BackendService.Services
             {
                 Subject = new ClaimsIdentity(new[] {
             new Claim(ClaimTypes.NameIdentifier, user.Id!),
-            new Claim(ClaimTypes.Role, user.Role == 0 ? "Admin" : "User")
+            new Claim(ClaimTypes.Role, user.Role.ToString())
         }),
                 Expires = DateTime.Now.AddDays(7),
                 SigningCredentials = creds
@@ -46,7 +46,7 @@ namespace BackendService.Services
                 user = await _userRepository.GetByUserNameAsync(request.Email, cancellationToken);
             }
 
-            if (user == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.Password))
+            if (user == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
             {
                 return null;
             }
