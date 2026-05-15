@@ -55,5 +55,22 @@ namespace BackendService.Controllers
             var user = await _userService.GetUserByIdAsync(userId, cancellationToken);
             return Ok(user);
         }
+
+        [HttpPost("progress")]
+        [Authorize]
+        public async Task<ActionResult<ResponseUserByIdDto>> UpdateProgress([FromBody] ProgressRequestDto request, CancellationToken cancellationToken)
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId)) return Unauthorized();
+
+            var result = await _userService.UpdateProgressAsync(userId, request.NodeId, request.Status, cancellationToken);
+            return Ok(new { data = new { completed = result.CompletedNodes, skipped = result.SkippedNodes } });
+        }
+    }
+
+    public class ProgressRequestDto
+    {
+        public string NodeId { get; set; } = string.Empty;
+        public string Status { get; set; } = "completed"; // completed, skipped, none
     }
 }

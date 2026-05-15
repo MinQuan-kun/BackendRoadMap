@@ -15,5 +15,7 @@ namespace BackendService.Models.DTOs.User.Responses
         public string? Phone { get; set; }
         public string? Address { get; set; }
         public List<string> SkillTags { get; set; } = new();
+        public List<string> CompletedNodes { get; set; } = new();
+        public List<string> SkippedNodes { get; set; } = new();
     }
 }

@@ -4,11 +4,8 @@ const ADMIN_CREDENTIALS = { email: 'Admin', password: 'admin123456' };
 
 // Correct Root IDs
 const ROOTS = {
-  M1: "69c3a8ae8d9c45338d958d9a", // C#
+  M1: "6a06f3df9b18cc78e251bf39", // C#
   M2: "69c3a8ae8d9c45338d958d9c", // Unity Core
-  M3: "69c3a8ae8d9c45338d958dba", // Visuals
-  M4: "69c3a8ae8d9c45338d958dc5", // Advanced
-  M5: "69c3a8ae8d9c45338d958dd3"  // Publish
 };
 
 async function run() {
@@ -50,7 +47,7 @@ async function run() {
         console.log(`Updating question: ${q.questionText}`);
       }
     }
-    
+
     console.log('Update logic finished (simulation).');
     console.log('Since there is no public API to update questions individually, I will provide the updated JSON file.');
 

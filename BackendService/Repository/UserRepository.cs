@@ -1,4 +1,4 @@
-﻿using BackendService.Data;
+using BackendService.Data;
 using BackendService.Models.Entities;
 using BackendService.Repository.Interface;
 using MongoDB.Driver;
@@ -33,6 +33,11 @@ namespace BackendService.Repository
             return await _dbContext.Users
                             .Find(u => u.UserName == userName)
                             .FirstOrDefaultAsync(cancellationToken);
+        }
+
+        public async Task UpdateAsync(string id, User user, CancellationToken cancellationToken = default)
+        {
+            await _dbContext.Users.ReplaceOneAsync(u => u.Id == id, user, cancellationToken: cancellationToken);
         }
     }
 }

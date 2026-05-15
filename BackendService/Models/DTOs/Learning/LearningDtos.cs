@@ -43,7 +43,6 @@ namespace BackendService.Models.DTOs.Learning
         public string? Id { get; set; }
         public string Title { get; set; } = string.Empty;
         public string? Description { get; set; }
-        public string? VideoUrl { get; set; }
         public string Difficulty { get; set; } = "easy";
         public int EstimatedMinutes { get; set; }
         public List<string> TaskIds { get; set; } = new();

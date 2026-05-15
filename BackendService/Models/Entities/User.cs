@@ -78,6 +78,12 @@ namespace BackendService.Models.Entities
         [BsonElement("created_at")]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
+        [BsonElement("completed_nodes")]
+        public List<string> CompletedNodes { get; set; } = new();
+
+        [BsonElement("skipped_nodes")]
+        public List<string> SkippedNodes { get; set; } = new();
+
         [BsonElement("updated_at")]
         public DateTime? UpdatedAt { get; set; }
     }

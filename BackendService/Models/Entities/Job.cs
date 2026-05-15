@@ -28,6 +28,12 @@ namespace BackendService.Models.Entities.Recruitment
         [BsonElement("job_type")]
         public string JobType { get; set; } = "remote";
 
+        [BsonElement("salary")]
+        public string? Salary { get; set; }
+
+        [BsonElement("experience_level")]
+        public string? ExperienceLevel { get; set; }
+
         [BsonElement("required_skill_tags")]
         public List<string> RequiredSkillTags { get; set; } = new();
 

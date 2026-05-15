@@ -18,6 +18,13 @@ namespace BackendService.Controllers
             _context = context;
         }
 
+        [HttpGet("courses")]
+        public async Task<ActionResult<IEnumerable<object>>> GetAllCourses()
+        {
+            var courses = await _context.Courses.Find(_ => true).SortBy(c => c.Order).ToListAsync();
+            return Ok(courses);
+        }
+
         [HttpGet]
         public async Task<ActionResult<IEnumerable<PathwayDto>>> GetAllPathways()
         {
@@ -81,6 +88,9 @@ namespace BackendService.Controllers
             var allLessonIds = modules.SelectMany(m => m.LessonIds).ToList();
             var lessons = await _context.Lessons.Find(l => allLessonIds.Contains(l.Id!)).ToListAsync();
 
+            var allTaskIds = lessons.SelectMany(l => l.TaskIds).ToList();
+            var tasks = await _context.Tasks.Find(t => allTaskIds.Contains(t.Id!)).ToListAsync();
+
             return Ok(new
             {
                 pathway,
@@ -94,9 +104,58 @@ namespace BackendService.Controllers
                         m.Id,
                         m.Title,
                         m.Description,
-                        Lessons = lessons.Where(l => m.LessonIds.Contains(l.Id!)).ToList()
+                        Lessons = lessons.Where(l => m.LessonIds.Contains(l.Id!)).Select(l => new
+                        {
+                            l.Id,
+                            l.Title,
+                            l.Description,
+                            l.VideoUrl,
+                            l.ContentBlocks,
+                            l.Resources,
+                            l.Prerequisites,
+                            Tasks = tasks.Where(t => l.TaskIds.Contains(t.Id!)).ToList()
+                        }).ToList()
                     }).ToList()
                 }).ToList()
+            });
+        }
+        [HttpGet("course/{id}")]
+        public async Task<ActionResult> GetCourseContent(string id)
+        {
+            var course = await _context.Courses.Find(c => c.Id == id).FirstOrDefaultAsync();
+            if (course == null) return NotFound();
+
+            var modules = await _context.Modules.Find(m => course.ModuleIds.Contains(m.Id!)).SortBy(m => m.Order).ToListAsync();
+            var allLessonIds = modules.SelectMany(m => m.LessonIds).ToList();
+            var lessons = await _context.Lessons.Find(l => allLessonIds.Contains(l.Id!)).ToListAsync();
+            var allTaskIds = lessons.SelectMany(l => l.TaskIds).ToList();
+            var tasks = await _context.Tasks.Find(t => allTaskIds.Contains(t.Id!)).ToListAsync();
+
+            return Ok(new
+            {
+                pathway = new { title = course.Title },
+                courses = new List<object> {
+                    new {
+                        course.Id,
+                        course.Title,
+                        course.Description,
+                        Modules = modules.Select(m => new {
+                            m.Id,
+                            m.Title,
+                            m.Description,
+                            Lessons = lessons.Where(l => m.LessonIds.Contains(l.Id!)).Select(l => new {
+                                l.Id,
+                                l.Title,
+                                l.Description,
+                                l.VideoUrl,
+                                l.ContentBlocks,
+                                l.Resources,
+                                l.Prerequisites,
+                                Tasks = tasks.Where(t => l.TaskIds.Contains(t.Id!)).ToList()
+                            }).ToList()
+                        }).ToList()
+                    }
+                }
             });
         }
     }

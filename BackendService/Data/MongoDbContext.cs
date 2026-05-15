@@ -55,8 +55,8 @@ namespace BackendService.Data
         public IMongoCollection<UserProgress> UserProgress => _database.GetCollection<UserProgress>("UserProgress");
 
         // Career Collection
-        public IMongoCollection<Job> Jobs => _database.GetCollection<Job>("Jobs");
-        public IMongoCollection<JobApplication> JobApplications => _database.GetCollection<JobApplication>("JobApplications");
+        public IMongoCollection<Job> Jobs => _database.GetCollection<Job>("Job");
+        public IMongoCollection<JobApplication> JobApplications => _database.GetCollection<JobApplication>("JobApplication");
 
     }
 }

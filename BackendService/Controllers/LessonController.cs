@@ -26,14 +26,11 @@ namespace BackendService.Controllers
             var lesson = await _context.Lessons.Find(l => l.Id == id).FirstOrDefaultAsync();
             if (lesson == null) return NotFound();
 
-            var tasks = await _context.Tasks.Find(t => t.LessonId == id).ToListAsync();
-
             return Ok(new LessonDto
             {
                 Id = lesson.Id,
                 Title = lesson.Title,
                 Description = lesson.Description,
-                VideoUrl = lesson.VideoUrl,
                 Difficulty = lesson.Difficulty,
                 EstimatedMinutes = lesson.EstimatedMinutes,
                 TaskIds = lesson.TaskIds,

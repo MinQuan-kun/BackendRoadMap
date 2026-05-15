@@ -36,5 +36,26 @@ namespace BackendService.Services
             var responseUser = UserToRegisterResponseDto.Transform(user);
             return responseUser;
         }
+
+        public async Task<ResponseUserByIdDto> UpdateProgressAsync(string userId, string nodeId, string status, CancellationToken cancellationToken)
+        {
+            var user = await _userRepository.GetByIdAsync(userId, cancellationToken);
+            if (user == null) throw new Exception("Không tìm thấy người dùng");
+
+            if (user.CompletedNodes == null) user.CompletedNodes = new List<string>();
+            if (user.SkippedNodes == null) user.SkippedNodes = new List<string>();
+
+            // Clean up existing
+            user.CompletedNodes.Remove(nodeId);
+            user.SkippedNodes.Remove(nodeId);
+
+            if (status == "completed") user.CompletedNodes.Add(nodeId);
+            else if (status == "skipped") user.SkippedNodes.Add(nodeId);
+
+            user.UpdatedAt = DateTime.UtcNow;
+            await _userRepository.UpdateAsync(user.Id!, user, cancellationToken);
+
+            return UserToResponseUserById.Transform(user);
+        }
     }
 }
