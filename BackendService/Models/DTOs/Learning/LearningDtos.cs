@@ -13,6 +13,7 @@ namespace BackendService.Models.DTOs.Learning
         public List<string> CourseIds { get; set; } = new();
         public string? RoadmapGraphId { get; set; }
         public bool IsOfficial { get; set; }
+        public string? CreatedBy { get; set; }
     }
 
     public class CourseDto

@@ -24,5 +24,14 @@ namespace BackendService.Models.Entities
 
         [BsonElement("xp_reward")]
         public int XPReward { get; set; }
+
+        [BsonElement("difficulty")]
+        public string Difficulty { get; set; } = "easy";
+
+        [BsonElement("media_url")]
+        public string? MediaUrl { get; set; }
+
+        [BsonElement("media_type")]
+        public string? MediaType { get; set; }
     }
 }

@@ -39,5 +39,10 @@ namespace BackendService.Repository
         {
             await _dbContext.Users.ReplaceOneAsync(u => u.Id == id, user, cancellationToken: cancellationToken);
         }
+
+        public async Task DeleteAsync(string id, CancellationToken cancellationToken = default)
+        {
+            await _dbContext.Users.DeleteOneAsync(u => u.Id == id, cancellationToken: cancellationToken);
+        }
     }
 }

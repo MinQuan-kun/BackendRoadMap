@@ -125,6 +125,12 @@ namespace BackendService.Controllers
                     ? await _context.Lessons.Find(Builders<Lesson>.Filter.In(l => l.Id, allLessonIds)).ToListAsync()
                     : new List<Lesson>();
 
+                // Fetch all tasks for all lessons
+                var allTaskIds = allLessons.SelectMany(l => l.TaskIds).Distinct().ToList();
+                var allTasks = allTaskIds.Count > 0
+                    ? await _context.Tasks.Find(Builders<LearningTask>.Filter.In(t => t.Id, allTaskIds)).ToListAsync()
+                    : new List<LearningTask>();
+
                 foreach (var course in orderedCourses)
                 {
                     var modules = new List<object>();
@@ -133,7 +139,16 @@ namespace BackendService.Controllers
                         var module = allModules.FirstOrDefault(m => m.Id == mId);
                         if (module == null) continue;
 
-                        var lessons = allLessons.Where(l => module.LessonIds.Contains(l.Id!)).ToList();
+                        var lessons = allLessons.Where(l => module.LessonIds.Contains(l.Id!)).Select(l => new
+                        {
+                            l.Id,
+                            l.Title,
+                            l.Description,
+                            l.VideoUrl,
+                            l.Difficulty,
+                            l.XPReward,
+                            Tasks = allTasks.Where(t => l.TaskIds.Contains(t.Id!)).ToList()
+                        }).ToList();
 
                         modules.Add(new
                         {
@@ -199,12 +214,34 @@ namespace BackendService.Controllers
                     var lessonIds = new List<string>();
                     foreach (var lReq in mReq.Lessons)
                     {
+                        // Save tasks for this lesson
+                        var taskIds = new List<string>();
+                        if (lReq.Tasks != null)
+                        {
+                            foreach (var tReq in lReq.Tasks)
+                            {
+                                var task = new LearningTask
+                                {
+                                    Title = tReq.Title,
+                                    Description = tReq.Description,
+                                    TaskType = tReq.TaskType ?? "practice",
+                                    Difficulty = tReq.Difficulty ?? "easy",
+                                    XPReward = tReq.XPReward,
+                                    MediaUrl = tReq.MediaUrl,
+                                    MediaType = tReq.MediaType
+                                };
+                                await _context.Tasks.InsertOneAsync(task);
+                                taskIds.Add(task.Id!);
+                            }
+                        }
+
                         var lesson = new Lesson
                         {
                             Title = lReq.Title,
                             Description = $"Nội dung bài học {lReq.Title} đang được cập nhật...",
-                            Difficulty = "easy",
-                            XPReward = 10
+                            Difficulty = lReq.Difficulty ?? "easy",
+                            XPReward = lReq.XPReward > 0 ? lReq.XPReward : 10,
+                            TaskIds = taskIds
                         };
                         await _context.Lessons.InsertOneAsync(lesson);
                         lessonIds.Add(lesson.Id!);
@@ -331,6 +368,12 @@ namespace BackendService.Controllers
 
                     if (lessonIds.Count > 0)
                     {
+                        var oldLessons = await _context.Lessons.Find(Builders<Lesson>.Filter.In(l => l.Id, lessonIds)).ToListAsync();
+                        var oldTaskIds = oldLessons.SelectMany(l => l.TaskIds).Distinct().ToList();
+                        if (oldTaskIds.Count > 0)
+                        {
+                            await _context.Tasks.DeleteManyAsync(Builders<LearningTask>.Filter.In(t => t.Id, oldTaskIds));
+                        }
                         await _context.Lessons.DeleteManyAsync(Builders<Lesson>.Filter.In(l => l.Id, lessonIds));
                     }
                     await _context.Modules.DeleteManyAsync(Builders<Module>.Filter.In(m => m.Id, moduleIds));
@@ -363,12 +406,34 @@ namespace BackendService.Controllers
                     var lessonIds = new List<string>();
                     foreach (var lReq in mReq.Lessons)
                     {
+                        // Save tasks for this lesson
+                        var taskIds = new List<string>();
+                        if (lReq.Tasks != null)
+                        {
+                            foreach (var tReq in lReq.Tasks)
+                            {
+                                var task = new LearningTask
+                                {
+                                    Title = tReq.Title,
+                                    Description = tReq.Description,
+                                    TaskType = tReq.TaskType ?? "practice",
+                                    Difficulty = tReq.Difficulty ?? "easy",
+                                    XPReward = tReq.XPReward,
+                                    MediaUrl = tReq.MediaUrl,
+                                    MediaType = tReq.MediaType
+                                };
+                                await _context.Tasks.InsertOneAsync(task);
+                                taskIds.Add(task.Id!);
+                            }
+                        }
+
                         var lesson = new Lesson
                         {
                             Title = lReq.Title,
                             Description = $"Nội dung bài học {lReq.Title} đang được cập nhật...",
                             Difficulty = lReq.Difficulty ?? "easy",
-                            XPReward = lReq.XPReward > 0 ? lReq.XPReward : 10
+                            XPReward = lReq.XPReward > 0 ? lReq.XPReward : 10,
+                            TaskIds = taskIds
                         };
                         await _context.Lessons.InsertOneAsync(lesson);
                         lessonIds.Add(lesson.Id!);
@@ -556,16 +621,73 @@ namespace BackendService.Controllers
         }
 
         [HttpPut("lessons/{id}")]
-        public async Task<IActionResult> UpdateLesson(string id, [FromBody] Lesson lesson)
+        public async Task<IActionResult> UpdateLesson(string id, [FromBody] LessonUpdateDto request)
         {
+            var lesson = await _context.Lessons.Find(l => l.Id == id).FirstOrDefaultAsync();
+            if (lesson == null) return NotFound();
+
+            lesson.Title = request.Title;
+            lesson.Description = request.Description;
+            lesson.VideoUrl = request.VideoUrl;
+            
+            // Update Tasks if provided
+            if (request.Tasks != null && request.Tasks.Any())
+            {
+                foreach (var taskDto in request.Tasks)
+                {
+                    if (string.IsNullOrEmpty(taskDto.Id))
+                    {
+                        taskDto.Id = null;
+                        await _context.Tasks.InsertOneAsync(taskDto);
+                        lesson.TaskIds.Add(taskDto.Id!);
+                    }
+                    else
+                    {
+                        await _context.Tasks.ReplaceOneAsync(t => t.Id == taskDto.Id, taskDto);
+                        if (!lesson.TaskIds.Contains(taskDto.Id)) lesson.TaskIds.Add(taskDto.Id);
+                    }
+                }
+            }
+
             await _context.Lessons.ReplaceOneAsync(l => l.Id == id, lesson);
-            return Ok();
+            return Ok(lesson);
+        }
+
+        public class LessonUpdateDto : Lesson
+        {
+            public List<LearningTask>? Tasks { get; set; }
         }
 
         [HttpDelete("lessons/{id}")]
         public async Task<IActionResult> DeleteLesson(string id)
         {
             await _context.Lessons.DeleteOneAsync(l => l.Id == id);
+            return Ok();
+        }
+
+        // --- Tasks ---
+        [HttpGet("tasks/{id}")]
+        public async Task<ActionResult<LearningTask>> GetTaskById(string id) { return Ok(await _context.Tasks.Find(t => t.Id == id).FirstOrDefaultAsync()); }
+
+        [HttpPost("tasks")]
+        public async Task<ActionResult<LearningTask>> CreateTask([FromBody] LearningTask task)
+        {
+            task.Id = null;
+            await _context.Tasks.InsertOneAsync(task);
+            return Ok(task);
+        }
+
+        [HttpPut("tasks/{id}")]
+        public async Task<IActionResult> UpdateTask(string id, [FromBody] LearningTask task)
+        {
+            await _context.Tasks.ReplaceOneAsync(t => t.Id == id, task);
+            return Ok();
+        }
+
+        [HttpDelete("tasks/{id}")]
+        public async Task<IActionResult> DeleteTask(string id)
+        {
+            await _context.Tasks.DeleteOneAsync(t => t.Id == id);
             return Ok();
         }
     }

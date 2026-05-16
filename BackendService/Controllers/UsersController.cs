@@ -56,6 +56,48 @@ namespace BackendService.Controllers
             return Ok(user);
         }
 
+        [HttpPut("profile")]
+        [Authorize]
+        public async Task<ActionResult> UpdateProfile([FromBody] UpdateProfileRequestDto request, CancellationToken cancellationToken)
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId)) return Unauthorized();
+
+            var user = await _userService.GetUserByIdAsync(userId, cancellationToken);
+            if (user == null) return NotFound();
+
+            // Transform back to entity or use a service method
+            // For now, let's assume I need to add this to IUserService
+            await _userService.UpdateProfileAsync(userId, request, cancellationToken);
+            return Ok(new { message = "Cập nhật hồ sơ thành công." });
+        }
+
+        [HttpPut("change-password")]
+        [Authorize]
+        public async Task<ActionResult> ChangePassword([FromBody] ChangePasswordRequestDto request, CancellationToken cancellationToken)
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId)) return Unauthorized();
+
+            try {
+                await _userService.ChangePasswordAsync(userId, request.OldPassword, request.NewPassword, cancellationToken);
+                return Ok(new { message = "Đổi mật khẩu thành công." });
+            } catch (Exception ex) {
+                return BadRequest(ex.Message);
+            }
+        }
+
+        [HttpDelete("profile")]
+        [Authorize]
+        public async Task<ActionResult> DeleteProfile(CancellationToken cancellationToken)
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId)) return Unauthorized();
+
+            await _userService.DeleteAccountAsync(userId, cancellationToken);
+            return Ok(new { message = "Xóa tài khoản thành công." });
+        }
+
         [HttpPost("progress")]
         [Authorize]
         public async Task<ActionResult<ResponseUserByIdDto>> UpdateProgress([FromBody] ProgressRequestDto request, CancellationToken cancellationToken)

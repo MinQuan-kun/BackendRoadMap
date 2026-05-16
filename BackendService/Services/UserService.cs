@@ -1,6 +1,7 @@
 using BackendService.Mapping;
 using BackendService.Models.DTOs.User.Requests;
 using BackendService.Models.DTOs.User.Responses;
+using BackendService.Models.Entities;
 using BackendService.Repository.Interface;
 using BackendService.Services.Interface;
 
@@ -56,6 +57,57 @@ namespace BackendService.Services
             await _userRepository.UpdateAsync(user.Id!, user, cancellationToken);
 
             return UserToResponseUserById.Transform(user);
+        }
+
+        public async Task UpdateProfileAsync(string userId, UpdateProfileRequestDto request, CancellationToken cancellationToken)
+        {
+            var user = await _userRepository.GetByIdAsync(userId, cancellationToken);
+            if (user == null) throw new Exception("Không tìm thấy người dùng");
+
+            if (!string.IsNullOrEmpty(request.FullName)) user.DisplayName = request.FullName;
+            if (!string.IsNullOrEmpty(request.Bio)) user.Bio = request.Bio;
+            if (!string.IsNullOrEmpty(request.AvatarUrl)) user.AvatarUrl = request.AvatarUrl;
+            if (!string.IsNullOrEmpty(request.CoverUrl)) user.CoverUrl = request.CoverUrl;
+            if (!string.IsNullOrEmpty(request.Phone)) user.Phone = request.Phone;
+            if (!string.IsNullOrEmpty(request.Address)) user.Address = request.Address;
+            if (!string.IsNullOrEmpty(request.BirthDate)) user.BirthDate = request.BirthDate;
+
+            if (request.Links != null)
+            {
+                if (user.Links == null) user.Links = new UserLinks();
+                user.Links.Github = request.Links.Github;
+                user.Links.Portfolio = request.Links.Portfolio;
+                user.Links.LinkedIn = request.Links.LinkedIn;
+                user.Links.Facebook = request.Links.Facebook;
+            }
+
+            if (request.Skills != null)
+            {
+                user.SkillTags = request.Skills;
+            }
+
+            user.UpdatedAt = DateTime.UtcNow;
+            await _userRepository.UpdateAsync(userId, user, cancellationToken);
+        }
+
+        public async Task ChangePasswordAsync(string userId, string oldPassword, string newPassword, CancellationToken cancellationToken)
+        {
+            var user = await _userRepository.GetByIdAsync(userId, cancellationToken);
+            if (user == null) throw new Exception("Không tìm thấy người dùng");
+
+            if (!BCrypt.Net.BCrypt.Verify(oldPassword, user.PasswordHash))
+            {
+                throw new Exception("Mật khẩu cũ không chính xác.");
+            }
+
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(newPassword);
+            user.UpdatedAt = DateTime.UtcNow;
+            await _userRepository.UpdateAsync(userId, user, cancellationToken);
+        }
+
+        public async Task DeleteAccountAsync(string userId, CancellationToken cancellationToken)
+        {
+            await _userRepository.DeleteAsync(userId, cancellationToken);
         }
     }
 }

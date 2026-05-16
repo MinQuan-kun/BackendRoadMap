@@ -26,9 +26,39 @@ namespace BackendService.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<PathwayDto>>> GetAllPathways()
+        public async Task<ActionResult<IEnumerable<PathwayDto>>> GetPathways([FromQuery] string? search, [FromQuery] string? creatorId, [FromQuery] string? engine, [FromQuery] bool? includeOfficial)
         {
-            var pathways = await _context.Pathways.Find(_ => true).ToListAsync();
+            var filterBuilder = Builders<Pathway>.Filter;
+            var filter = filterBuilder.Empty;
+
+            if (!string.IsNullOrEmpty(search))
+            {
+                filter &= filterBuilder.Regex(p => p.Title, new MongoDB.Bson.BsonRegularExpression(search, "i"));
+            }
+
+            if (!string.IsNullOrEmpty(engine))
+            {
+                filter &= filterBuilder.Regex(p => p.Title, new MongoDB.Bson.BsonRegularExpression(engine, "i"));
+            }
+
+            if (!string.IsNullOrEmpty(creatorId))
+            {
+                var creatorFilter = filterBuilder.Eq(p => p.CreatedBy, creatorId);
+                if (includeOfficial == true)
+                {
+                    filter &= (creatorFilter | filterBuilder.Eq(p => p.IsOfficial, true));
+                }
+                else
+                {
+                    filter &= creatorFilter;
+                }
+            }
+            else if (includeOfficial == true)
+            {
+                filter &= filterBuilder.Eq(p => p.IsOfficial, true);
+            }
+
+            var pathways = await _context.Pathways.Find(filter).ToListAsync();
             return Ok(pathways.Select(p => new PathwayDto
             {
                 Id = p.Id,
@@ -41,7 +71,8 @@ namespace BackendService.Controllers
                 Tags = p.Tags,
                 CourseIds = p.CourseIds,
                 RoadmapGraphId = p.RoadmapGraphId,
-                IsOfficial = p.IsOfficial
+                IsOfficial = p.IsOfficial,
+                CreatedBy = p.CreatedBy
             }));
         }
 
@@ -67,7 +98,8 @@ namespace BackendService.Controllers
                 Tags = pathway.Tags,
                 CourseIds = pathway.CourseIds,
                 RoadmapGraphId = pathway.RoadmapGraphId,
-                IsOfficial = pathway.IsOfficial
+                IsOfficial = pathway.IsOfficial,
+                CreatedBy = pathway.CreatedBy
             });
         }
         [HttpGet("{slug}/content")]
@@ -78,7 +110,51 @@ namespace BackendService.Controllers
             {
                 pathway = await _context.Pathways.Find(p => p.Id == slug).FirstOrDefaultAsync();
             }
-            if (pathway == null) return NotFound();
+
+            if (pathway == null)
+            {
+                // Fallback: Check if it's a Course ID
+                var course = await _context.Courses.Find(c => c.Id == slug).FirstOrDefaultAsync();
+                if (course != null) return await GetCourseContent(slug);
+
+                // Fallback: Check if it's a Task ID
+                var task = await _context.Tasks.Find(t => t.Id == slug).FirstOrDefaultAsync();
+                if (task != null)
+                {
+                    // If it's a task, we need to find the lesson, module, and course it belongs to
+                    // For now, let's just return a minimal structure so the frontend doesn't crash
+                    return Ok(new
+                    {
+                        pathway = new { id = task.Id, title = task.Title },
+                        courses = new List<object>
+                        {
+                            new
+                            {
+                                id = "single-task-course",
+                                title = "Nhiệm vụ lẻ",
+                                modules = new List<object>
+                                {
+                                    new
+                                    {
+                                        id = "single-task-module",
+                                        title = "Thông tin nhiệm vụ",
+                                        lessons = new List<object>
+                                        {
+                                            new
+                                            {
+                                                id = "single-task-lesson",
+                                                title = task.Title,
+                                                tasks = new List<object> { task }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+                return NotFound();
+            }
 
             var courses = await _context.Courses.Find(c => pathway.CourseIds.Contains(c.Id!)).SortBy(c => c.Order).ToListAsync();
             

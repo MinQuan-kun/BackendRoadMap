@@ -70,5 +70,37 @@ namespace BackendService.Controllers
 
             return Ok(new { progress.XP, progress.Level });
         }
+
+        [HttpPost("task/complete/{taskId}")]
+        public async Task<IActionResult> CompleteTask(string taskId)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId)) return Unauthorized();
+
+            var task = await _context.Tasks.Find(t => t.Id == taskId).FirstOrDefaultAsync();
+            if (task == null) return NotFound();
+
+            var filter = Builders<UserProgress>.Filter.Eq(p => p.UserId, userId);
+            var progress = await _context.UserProgress.Find(filter).FirstOrDefaultAsync();
+
+            if (progress == null)
+            {
+                progress = new UserProgress { UserId = userId };
+                await _context.UserProgress.InsertOneAsync(progress);
+            }
+
+            if (!progress.CompletedTaskIds.Contains(taskId))
+            {
+                progress.CompletedTaskIds.Add(taskId);
+                progress.XP += task.XPReward;
+                progress.LastActivity = DateTime.UtcNow;
+                
+                progress.Level = (progress.XP / 1000) + 1;
+
+                await _context.UserProgress.ReplaceOneAsync(filter, progress);
+            }
+
+            return Ok(new { progress.XP, progress.Level, progress.CompletedTaskIds });
+        }
     }
 }

@@ -48,6 +48,13 @@ namespace BackendService.Controllers
                 .Limit(pageSize)
                 .ToListAsync();
 
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var userApplications = new List<string>();
+            if (!string.IsNullOrEmpty(userId))
+            {
+                userApplications = await _context.JobApplications.Find(a => a.UserId == userId).Project(a => a.JobId).ToListAsync();
+            }
+
             // Map to frontend structure
             var result = jobs.Select(j => new {
                 id = j.Id,
@@ -58,7 +65,8 @@ namespace BackendService.Controllers
                 experienceLevel = j.ExperienceLevel,
                 skills = j.RequiredSkillTags,
                 postedAt = j.CreatedAt.ToString("dd/MM/yyyy"),
-                matchingRate = 0 // Placeholder
+                matchingRate = 0, // Placeholder
+                hasApplied = userApplications.Contains(j.Id!)
             });
 
             return Ok(new { data = result, total = total });
@@ -99,20 +107,62 @@ namespace BackendService.Controllers
         }
 
         // POST: api/jobs/{id}/apply
+        [Authorize]
         [HttpPost("{id}/apply")]
         public async Task<ActionResult> ApplyJob(string id)
         {
-            // Simple application logic for now
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId)) return Unauthorized();
+
+            // Check if already applied
+            var existing = await _context.JobApplications.Find(a => a.JobId == id && a.UserId == userId).FirstOrDefaultAsync();
+            if (existing != null) return BadRequest(new { message = "Bạn đã ứng tuyển công việc này rồi." });
+
             var application = new JobApplication
             {
                 JobId = id,
-                UserId = "anonymous", // Should get from JWT in real scenario
-                Status = "pending",
+                UserId = userId,
+                Status = "Pending",
                 CreatedAt = DateTime.UtcNow
             };
 
             await _context.JobApplications.InsertOneAsync(application);
             return Ok(new { message = "Ứng tuyển thành công!" });
+        }
+
+        // GET: api/jobs/my-applications
+        [Authorize]
+        [HttpGet("my-applications")]
+        public async Task<ActionResult> GetMyApplications()
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId)) return Unauthorized();
+
+            var applications = await _context.JobApplications.Find(a => a.UserId == userId).ToListAsync();
+            
+            var jobIds = applications.Select(a => a.JobId).Distinct().ToList();
+            var jobs = await _context.Jobs.Find(j => jobIds.Contains(j.Id!)).ToListAsync();
+
+            var result = applications.Select(a => {
+                var job = jobs.FirstOrDefault(j => j.Id == a.JobId);
+                return new {
+                    applicationId = a.Id,
+                    jobId = a.JobId,
+                    status = a.Status,
+                    appliedAt = a.CreatedAt,
+                    job = job != null ? new {
+                        title = job.Title,
+                        location = job.Location,
+                        salary = job.Salary,
+                    } : null,
+                    company = job != null ? new {
+                        name = job.CompanyName,
+                        logo = "" // Placeholder
+                    } : null
+                };
+            });
+
+            return Ok(result);
         }
 
         // GET: api/jobs/my-posts

@@ -57,5 +57,17 @@ namespace BackendService.Models.DTOs.Admin
         public string Type { get; set; } = "text";
         public string? Difficulty { get; set; }
         public int XPReward { get; set; }
+        public List<FullTaskRequestDto> Tasks { get; set; } = new();
+    }
+
+    public class FullTaskRequestDto
+    {
+        public string Title { get; set; } = string.Empty;
+        public string? Description { get; set; }
+        public string TaskType { get; set; } = "practice";
+        public string? Difficulty { get; set; }
+        public int XPReward { get; set; }
+        public string? MediaUrl { get; set; }
+        public string? MediaType { get; set; }
     }
 }
