@@ -84,6 +84,9 @@ namespace BackendService.Models.Entities
         [BsonElement("skipped_nodes")]
         public List<string> SkippedNodes { get; set; } = new();
 
+        [BsonElement("followed_pathway_ids")]
+        public List<string> FollowedPathwayIds { get; set; } = new();
+
         [BsonElement("updated_at")]
         public DateTime? UpdatedAt { get; set; }
     }

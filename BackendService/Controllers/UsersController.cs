@@ -122,6 +122,49 @@ namespace BackendService.Controllers
             return Ok(new { data = new { completed = result.CompletedNodes, skipped = result.SkippedNodes } });
         }
 
+        [HttpPost("follow/{pathwayId}")]
+        [Authorize]
+        public async Task<IActionResult> FollowPathway(string pathwayId, CancellationToken cancellationToken)
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId)) return Unauthorized();
+
+            var user = await _context.Users.Find(u => u.Id == userId).FirstOrDefaultAsync(cancellationToken);
+            if (user == null) return NotFound("User not found.");
+
+            if (user.FollowedPathwayIds == null)
+            {
+                user.FollowedPathwayIds = new List<string>();
+            }
+
+            if (!user.FollowedPathwayIds.Contains(pathwayId))
+            {
+                var update = Builders<BackendService.Models.Entities.User>.Update.Push(u => u.FollowedPathwayIds, pathwayId);
+                await _context.Users.UpdateOneAsync(u => u.Id == userId, update, cancellationToken: cancellationToken);
+            }
+
+            return Ok(new { message = "Theo dõi lộ trình thành công." });
+        }
+
+        [HttpPost("unfollow/{pathwayId}")]
+        [Authorize]
+        public async Task<IActionResult> UnfollowPathway(string pathwayId, CancellationToken cancellationToken)
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId)) return Unauthorized();
+
+            var user = await _context.Users.Find(u => u.Id == userId).FirstOrDefaultAsync(cancellationToken);
+            if (user == null) return NotFound("User not found.");
+
+            if (user.FollowedPathwayIds != null && user.FollowedPathwayIds.Contains(pathwayId))
+            {
+                var update = Builders<BackendService.Models.Entities.User>.Update.Pull(u => u.FollowedPathwayIds, pathwayId);
+                await _context.Users.UpdateOneAsync(u => u.Id == userId, update, cancellationToken: cancellationToken);
+            }
+
+            return Ok(new { message = "Hủy theo dõi lộ trình thành công." });
+        }
+
         [HttpPost("profile/avatar")]
         [Authorize]
         public async Task<IActionResult> UploadAvatar(IFormFile file, CancellationToken cancellationToken)

@@ -20,5 +20,6 @@ namespace BackendService.Models.DTOs.User.Responses
         public bool HasCompletedQuiz { get; set; }
         public List<string> CompletedNodes { get; set; } = new();
         public List<string> SkippedNodes { get; set; } = new();
+        public List<string> FollowedPathwayIds { get; set; } = new();
     }
 }

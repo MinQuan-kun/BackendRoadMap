@@ -13,6 +13,7 @@ namespace BackendService.Models.DTOs.Learning
         public List<string> CourseIds { get; set; } = new();
         public string? RoadmapGraphId { get; set; }
         public bool IsOfficial { get; set; }
+        public bool IsApproved { get; set; }
         public string? CreatedBy { get; set; }
     }
 
@@ -22,6 +23,7 @@ namespace BackendService.Models.DTOs.Learning
         public string Title { get; set; } = string.Empty;
         public string? Description { get; set; }
         public string? Thumbnail { get; set; }
+        public string? CoverUrl { get; set; }
         public string Difficulty { get; set; } = "beginner";
         public int EstimatedHours { get; set; }
         public List<string> ModuleIds { get; set; } = new();

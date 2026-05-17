@@ -22,6 +22,9 @@ namespace BackendService.Models.Entities
         [BsonElement("thumbnail")]
         public string? Thumbnail { get; set; }
 
+        [BsonElement("cover_url")]
+        public string? CoverUrl { get; set; }
+
         [BsonElement("difficulty")]
         public string Difficulty { get; set; } = "beginner";
 

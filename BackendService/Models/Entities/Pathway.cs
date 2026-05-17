@@ -40,6 +40,9 @@ namespace BackendService.Models.Entities
         [BsonElement("is_official")]
         public bool IsOfficial { get; set; } = true;
 
+        [BsonElement("is_approved")]
+        public bool IsApproved { get; set; } = false;
+
         [BsonElement("created_by")]
         public string? CreatedBy { get; set; }
 

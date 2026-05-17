@@ -21,7 +21,10 @@ namespace BackendService.Mapping
                 Phone = user.Phone,
                 Address = user.Address,
                 BirthDate = user.BirthDate,
-                Skills = user.SkillTags
+                Skills = user.SkillTags,
+                CompletedNodes = user.CompletedNodes,
+                SkippedNodes = user.SkippedNodes,
+                FollowedPathwayIds = user.FollowedPathwayIds
             };
         }
     }

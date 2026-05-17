@@ -223,6 +223,8 @@ namespace BackendService.Controllers
                         Id = course.Id,
                         Title = course.Title,
                         Description = course.Description,
+                        Thumbnail = course.Thumbnail,
+                        CoverUrl = course.CoverUrl,
                         Modules = modules
                     });
                 }
@@ -251,6 +253,7 @@ namespace BackendService.Controllers
                 EstimatedHours = pathway.EstimatedHours,
                 Tags = pathway.Tags,
                 IsOfficial = pathway.IsOfficial,
+                IsApproved = pathway.IsApproved,
                 Courses = courseData,
                 Graph = graphData
             });
@@ -321,6 +324,8 @@ namespace BackendService.Controllers
                 {
                     Title = cReq.Title,
                     Description = cReq.Description,
+                    Thumbnail = cReq.Thumbnail,
+                    CoverUrl = cReq.CoverUrl,
                     Order = courseOrder++,
                     ModuleIds = moduleIds
                 };
@@ -401,6 +406,7 @@ namespace BackendService.Controllers
                 EstimatedHours = request.EstimatedHours,
                 Tags = request.Tags,
                 IsOfficial = request.IsOfficial,
+                IsApproved = request.IsApproved,
                 CourseIds = courseIds,
                 RoadmapGraphId = graphId
             };
@@ -513,6 +519,8 @@ namespace BackendService.Controllers
                 {
                     Title = cReq.Title,
                     Description = cReq.Description,
+                    Thumbnail = cReq.Thumbnail,
+                    CoverUrl = cReq.CoverUrl,
                     Order = courseOrder++,
                     ModuleIds = moduleIds
                 };
@@ -591,6 +599,7 @@ namespace BackendService.Controllers
             existingPathway.EstimatedHours = request.EstimatedHours;
             existingPathway.Tags = request.Tags;
             existingPathway.IsOfficial = request.IsOfficial;
+            existingPathway.IsApproved = request.IsApproved;
             existingPathway.CourseIds = courseIds;
             existingPathway.RoadmapGraphId = graphId;
 
@@ -610,6 +619,16 @@ namespace BackendService.Controllers
         {
             await _context.Pathways.DeleteOneAsync(p => p.Id == id);
             return Ok();
+        }
+
+        [HttpPut("pathways/{id}/approve")]
+        public async Task<IActionResult> ApprovePathway(string id, [FromQuery] bool approve)
+        {
+            var filter = Builders<Pathway>.Filter.Eq(p => p.Id, id);
+            var update = Builders<Pathway>.Update.Set(p => p.IsApproved, approve);
+            var result = await _context.Pathways.UpdateOneAsync(filter, update);
+            if (result.MatchedCount == 0) return NotFound("Pathway not found");
+            return Ok(new { Message = approve ? "Đã phê duyệt lộ trình cộng đồng" : "Đã hủy phê duyệt lộ trình cộng đồng" });
         }
 
         // --- Courses ---

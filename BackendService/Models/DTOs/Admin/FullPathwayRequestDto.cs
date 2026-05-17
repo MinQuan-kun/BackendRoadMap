@@ -13,6 +13,7 @@ namespace BackendService.Models.DTOs.Admin
         public int EstimatedHours { get; set; }
         public List<string> Tags { get; set; } = new();
         public bool IsOfficial { get; set; }
+        public bool IsApproved { get; set; }
         public List<FullCourseRequestDto> Courses { get; set; } = new();
         public GraphRequestDto? Graph { get; set; }
     }
@@ -22,6 +23,8 @@ namespace BackendService.Models.DTOs.Admin
         public string Id { get; set; } = string.Empty;
         public string Title { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
+        public string? Thumbnail { get; set; }
+        public string? CoverUrl { get; set; }
         public List<FullModuleRequestDto> Modules { get; set; } = new();
     }
 

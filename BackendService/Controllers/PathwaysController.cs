@@ -25,8 +25,76 @@ namespace BackendService.Controllers
             return Ok(courses);
         }
 
+        [HttpGet("followed")]
+        [Authorize]
+        public async Task<ActionResult<IEnumerable<object>>> GetFollowedPathways(CancellationToken cancellationToken)
+        {
+            var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId)) return Unauthorized();
+
+            var user = await _context.Users.Find(u => u.Id == userId).FirstOrDefaultAsync(cancellationToken);
+            if (user == null) return NotFound("User not found.");
+
+            if (user.FollowedPathwayIds == null || user.FollowedPathwayIds.Count == 0)
+            {
+                return Ok(new List<object>());
+            }
+
+            var filter = Builders<Pathway>.Filter.In(p => p.Id, user.FollowedPathwayIds);
+            var pathways = await _context.Pathways.Find(filter).ToListAsync(cancellationToken);
+
+            var result = new List<object>();
+
+            foreach (var pathway in pathways)
+            {
+                var courses = await _context.Courses.Find(c => pathway.CourseIds.Contains(c.Id!)).ToListAsync(cancellationToken);
+                var allModuleIds = courses.SelectMany(c => c.ModuleIds).ToList();
+                var modules = await _context.Modules.Find(m => allModuleIds.Contains(m.Id!)).ToListAsync(cancellationToken);
+                
+                var allLessonIds = modules.SelectMany(m => m.LessonIds).Distinct().ToList();
+                var lessons = await _context.Lessons.Find(l => allLessonIds.Contains(l.Id!)).ToListAsync(cancellationToken);
+
+                int totalLessons = allLessonIds.Count;
+                int completedLessons = allLessonIds.Count(id => user.CompletedNodes.Contains(id));
+                int skippedLessons = allLessonIds.Count(id => user.SkippedNodes.Contains(id));
+
+                result.Add(new
+                {
+                    pathway.Id,
+                    pathway.Title,
+                    pathway.Slug,
+                    pathway.Description,
+                    pathway.Thumbnail,
+                    pathway.Difficulty,
+                    pathway.EstimatedHours,
+                    pathway.IsOfficial,
+                    TotalLessons = totalLessons,
+                    CompletedLessons = completedLessons,
+                    SkippedLessons = skippedLessons,
+                    LessonsProgress = lessons.Select(lesson => {
+                        var status = "not_started";
+                        if (user.CompletedNodes.Contains(lesson.Id!)) status = "completed";
+                        else if (user.SkippedNodes.Contains(lesson.Id!)) status = "skipped";
+                        return new { 
+                            LessonId = lesson.Id, 
+                            Title = lesson.Title, 
+                            Description = lesson.Description,
+                            Status = status 
+                        };
+                    }).ToList()
+                });
+            }
+
+            return Ok(result);
+        }
+
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<PathwayDto>>> GetPathways([FromQuery] string? search, [FromQuery] string? creatorId, [FromQuery] string? engine, [FromQuery] bool? includeOfficial)
+        public async Task<ActionResult<IEnumerable<PathwayDto>>> GetPathways(
+            [FromQuery] string? search, 
+            [FromQuery] string? creatorId, 
+            [FromQuery] string? engine, 
+            [FromQuery] bool? includeOfficial,
+            [FromQuery] string? type)
         {
             var filterBuilder = Builders<Pathway>.Filter;
             var filter = filterBuilder.Empty;
@@ -41,21 +109,64 @@ namespace BackendService.Controllers
                 filter &= filterBuilder.Regex(p => p.Title, new MongoDB.Bson.BsonRegularExpression(engine, "i"));
             }
 
-            if (!string.IsNullOrEmpty(creatorId))
+            // Apply type filtering
+            if (type == "official")
             {
-                var creatorFilter = filterBuilder.Eq(p => p.CreatedBy, creatorId);
-                if (includeOfficial == true)
+                filter &= filterBuilder.Eq(p => p.IsOfficial, true);
+            }
+            else if (type == "community")
+            {
+                filter &= filterBuilder.Eq(p => p.IsOfficial, false);
+                filter &= filterBuilder.Eq(p => p.IsApproved, true);
+            }
+            else if (type == "recruiter")
+            {
+                // Find all recruiter user IDs
+                var recruiters = await _context.Users.Find(u => u.Role == UserRole.Recruiter).ToListAsync();
+                var recruiterIds = recruiters.Select(u => u.Id).Where(id => id != null).ToList();
+
+                // Find all roadmap graph IDs used in Jobs
+                var jobs = await _context.Jobs.Find(j => !string.IsNullOrEmpty(j.RoadmapGraphId)).ToListAsync();
+                var jobRoadmapIds = jobs.Select(j => j.RoadmapGraphId).Where(id => id != null).ToList();
+
+                // Filter pathways created by recruiter OR having a roadmap graph used in a job
+                var recruiterFilter = filterBuilder.In(p => p.CreatedBy, recruiterIds) | 
+                                      filterBuilder.In(p => p.RoadmapGraphId, jobRoadmapIds);
+                
+                filter &= recruiterFilter;
+                filter &= filterBuilder.Eq(p => p.IsOfficial, false); // recruiter pathways are unofficial
+            }
+            else
+            {
+                if (!string.IsNullOrEmpty(creatorId))
                 {
-                    filter &= (creatorFilter | filterBuilder.Eq(p => p.IsOfficial, true));
+                    var creatorFilter = filterBuilder.Eq(p => p.CreatedBy, creatorId);
+                    if (includeOfficial == true)
+                    {
+                        filter &= (creatorFilter | filterBuilder.Eq(p => p.IsOfficial, true));
+                    }
+                    else
+                    {
+                        filter &= creatorFilter;
+                    }
                 }
                 else
                 {
-                    filter &= creatorFilter;
+                    if (includeOfficial == true)
+                    {
+                        filter &= filterBuilder.Eq(p => p.IsOfficial, true);
+                    }
+                    else if (includeOfficial == false)
+                    {
+                        filter &= filterBuilder.Eq(p => p.IsOfficial, false);
+                        filter &= filterBuilder.Eq(p => p.IsApproved, true);
+                    }
+                    else
+                    {
+                        // Default public listing (e.g. homepage): official OR approved community pathways
+                        filter &= (filterBuilder.Eq(p => p.IsOfficial, true) | filterBuilder.Eq(p => p.IsApproved, true));
+                    }
                 }
-            }
-            else if (includeOfficial == true)
-            {
-                filter &= filterBuilder.Eq(p => p.IsOfficial, true);
             }
 
             var pathways = await _context.Pathways.Find(filter).ToListAsync();
@@ -72,6 +183,7 @@ namespace BackendService.Controllers
                 CourseIds = p.CourseIds,
                 RoadmapGraphId = p.RoadmapGraphId,
                 IsOfficial = p.IsOfficial,
+                IsApproved = p.IsApproved,
                 CreatedBy = p.CreatedBy
             }));
         }
@@ -99,6 +211,7 @@ namespace BackendService.Controllers
                 CourseIds = pathway.CourseIds,
                 RoadmapGraphId = pathway.RoadmapGraphId,
                 IsOfficial = pathway.IsOfficial,
+                IsApproved = pathway.IsApproved,
                 CreatedBy = pathway.CreatedBy
             });
         }
@@ -175,6 +288,11 @@ namespace BackendService.Controllers
                     c.Id,
                     c.Title,
                     c.Description,
+                    c.Thumbnail,
+                    c.CoverUrl,
+                    c.Difficulty,
+                    c.EstimatedHours,
+                    c.XPReward,
                     Modules = modules.Where(m => c.ModuleIds.Contains(m.Id!)).Select(m => new
                     {
                         m.Id,
@@ -215,6 +333,11 @@ namespace BackendService.Controllers
                         course.Id,
                         course.Title,
                         course.Description,
+                        course.Thumbnail,
+                        course.CoverUrl,
+                        course.Difficulty,
+                        course.EstimatedHours,
+                        course.XPReward,
                         Modules = modules.Select(m => new {
                             m.Id,
                             m.Title,
