@@ -4,6 +4,8 @@ using BackendService.Models.DTOs.User.Requests;
 using BackendService.Models.DTOs.User.Responses;
 using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
+using BackendService.Data;
+using MongoDB.Driver;
 
 namespace BackendService.Controllers
 {
@@ -14,12 +16,14 @@ namespace BackendService.Controllers
         private readonly IUserService _userService;
         private readonly IAuthService _authService;
         private readonly ICloudinaryService _cloudinaryService;
+        private readonly MongoDbContext _context;
 
-        public UsersController(IUserService userService, IAuthService authService, ICloudinaryService cloudinaryService)
+        public UsersController(IUserService userService, IAuthService authService, ICloudinaryService cloudinaryService, MongoDbContext context)
         {
             _userService = userService;
             _authService = authService;
             _cloudinaryService = cloudinaryService;
+            _context = context;
         }
 
         [HttpPost("register")]
@@ -55,6 +59,10 @@ namespace BackendService.Controllers
             if (string.IsNullOrEmpty(userId)) return Unauthorized();
 
             var user = await _userService.GetUserByIdAsync(userId, cancellationToken);
+            if (user != null)
+            {
+                user.HasCompletedQuiz = await _context.CareerQuizResults.Find(r => r.UserId == userId).AnyAsync(cancellationToken);
+            }
             return Ok(user);
         }
 
@@ -70,6 +78,10 @@ namespace BackendService.Controllers
 
             await _userService.UpdateProfileAsync(userId, request, cancellationToken);
             var updatedUser = await _userService.GetUserByIdAsync(userId, cancellationToken);
+            if (updatedUser != null)
+            {
+                updatedUser.HasCompletedQuiz = await _context.CareerQuizResults.Find(r => r.UserId == userId).AnyAsync(cancellationToken);
+            }
             return Ok(updatedUser);
         }
 
