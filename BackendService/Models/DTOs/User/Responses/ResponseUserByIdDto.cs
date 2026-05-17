@@ -12,9 +12,11 @@ namespace BackendService.Models.DTOs.User.Responses
         public string? BirthDate { get; set; }
         public string? Bio { get; set; }
         public string? AvatarUrl { get; set; }
+        public string? CoverUrl { get; set; }
+        public UserLinks Links { get; set; } = new();
         public string? Phone { get; set; }
         public string? Address { get; set; }
-        public List<string> SkillTags { get; set; } = new();
+        public List<string> Skills { get; set; } = new();
         public List<string> CompletedNodes { get; set; } = new();
         public List<string> SkippedNodes { get; set; } = new();
     }

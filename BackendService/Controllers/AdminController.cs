@@ -103,6 +103,31 @@ namespace BackendService.Controllers
             return Ok(response);
         }
 
+        [HttpPost("users/{id}/reset-password")]
+        public async Task<IActionResult> ResetPassword(string id, [FromBody] AdminResetPasswordRequestDto request)
+        {
+            if (string.IsNullOrEmpty(request.NewPassword))
+            {
+                return BadRequest("Mật khẩu mới không được để trống.");
+            }
+
+            if (request.NewPassword.Length < 8)
+            {
+                return BadRequest("Mật khẩu phải có ít nhất 8 ký tự.");
+            }
+
+            var passwordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+            
+            var update = Builders<User>.Update
+                .Set(u => u.PasswordHash, passwordHash)
+                .Set(u => u.UpdatedAt, DateTime.UtcNow);
+
+            var result = await _context.Users.UpdateOneAsync(u => u.Id == id, update);
+            if (result.MatchedCount == 0) return NotFound("Người dùng không tồn tại.");
+
+            return Ok(new { message = "Đã đặt lại mật khẩu thành công." });
+        }
+
         [HttpGet("stats")]
         public async Task<IActionResult> GetStats()
         {
@@ -724,5 +749,10 @@ namespace BackendService.Controllers
             await _context.Tasks.DeleteOneAsync(t => t.Id == id);
             return Ok();
         }
+    }
+
+    public class AdminResetPasswordRequestDto
+    {
+        public string NewPassword { get; set; } = string.Empty;
     }
 }

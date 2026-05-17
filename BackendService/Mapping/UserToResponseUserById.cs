@@ -16,10 +16,12 @@ namespace BackendService.Mapping
                 Role = user.Role,
                 Bio = user.Bio,
                 AvatarUrl = user.AvatarUrl,
+                CoverUrl = user.CoverUrl,
+                Links = user.Links,
                 Phone = user.Phone,
                 Address = user.Address,
                 BirthDate = user.BirthDate,
-                SkillTags = user.SkillTags
+                Skills = user.SkillTags
             };
         }
     }

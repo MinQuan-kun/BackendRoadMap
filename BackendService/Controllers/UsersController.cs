@@ -13,11 +13,13 @@ namespace BackendService.Controllers
     {
         private readonly IUserService _userService;
         private readonly IAuthService _authService;
+        private readonly ICloudinaryService _cloudinaryService;
 
-        public UsersController(IUserService userService, IAuthService authService)
+        public UsersController(IUserService userService, IAuthService authService, ICloudinaryService cloudinaryService)
         {
             _userService = userService;
             _authService = authService;
+            _cloudinaryService = cloudinaryService;
         }
 
         [HttpPost("register")]
@@ -66,10 +68,9 @@ namespace BackendService.Controllers
             var user = await _userService.GetUserByIdAsync(userId, cancellationToken);
             if (user == null) return NotFound();
 
-            // Transform back to entity or use a service method
-            // For now, let's assume I need to add this to IUserService
             await _userService.UpdateProfileAsync(userId, request, cancellationToken);
-            return Ok(new { message = "Cập nhật hồ sơ thành công." });
+            var updatedUser = await _userService.GetUserByIdAsync(userId, cancellationToken);
+            return Ok(updatedUser);
         }
 
         [HttpPut("change-password")]
@@ -107,6 +108,18 @@ namespace BackendService.Controllers
 
             var result = await _userService.UpdateProgressAsync(userId, request.NodeId, request.Status, cancellationToken);
             return Ok(new { data = new { completed = result.CompletedNodes, skipped = result.SkippedNodes } });
+        }
+
+        [HttpPost("profile/avatar")]
+        [Authorize]
+        public async Task<IActionResult> UploadAvatar(IFormFile file, CancellationToken cancellationToken)
+        {
+            if (file == null || file.Length == 0) return BadRequest("File không hợp lệ.");
+
+            var result = await _cloudinaryService.UploadImageAsync(file, "profile");
+            if (result.Error != null) return BadRequest(result.Error.Message);
+
+            return Ok(new { url = result.SecureUrl.ToString(), publicId = result.PublicId });
         }
     }
 
