@@ -20,11 +20,15 @@ builder.Services.Configure<DatabaseSettings>(
 builder.Services.Configure<CloudinarySettings>(
     builder.Configuration.GetSection("Cloudinary"));
 
+builder.Services.Configure<EmailOptions>(
+    builder.Configuration.GetSection("EmailOptions"));
+
 // Đăng ký Service
 builder.Services.AddSingleton<MongoDbContext>();
 builder.Services.AddScoped<ICloudinaryService, CloudinaryService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IEmailService, SMTPEmailService>();
 
 // Đăng ky Repository
 builder.Services.AddScoped<IUserRepository, UserRepository>();
@@ -33,6 +37,8 @@ builder.Services.AddScoped<IUserRepository, UserRepository>();
 // Đăng ký Validator
 builder.Services.AddScoped<IValidator<RegisterRequestDto>, RegisterRequestValidator>();
 builder.Services.AddScoped<IValidator<LoginRequestDto>, LoginRequestValidator>();
+builder.Services.AddScoped<IValidator<ForgotPasswordRequestDto>, ForgotPasswordRequestValidator>();
+builder.Services.AddScoped<IValidator<ResetPasswordRequestDto>, ResetPasswordRequestValidator>();
 
 builder.Services.AddControllersWithViews();
 builder.Services.AddAuthorization();

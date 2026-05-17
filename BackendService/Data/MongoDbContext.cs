@@ -33,6 +33,7 @@ namespace BackendService.Data
         }
 
         public IMongoCollection<User> Users => _database.GetCollection<User>("Users");
+        public IMongoCollection<EmailHistory> EmailHistories => _database.GetCollection<EmailHistory>("EmailHistories");
 
         // Learning Collection
         public IMongoCollection<Pathway> Pathways => _database.GetCollection<Pathway>("Pathways");

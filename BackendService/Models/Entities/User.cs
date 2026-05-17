@@ -23,6 +23,12 @@ namespace BackendService.Models.Entities
         [BsonElement("password_hash")]
         public string PasswordHash { get; set; } = string.Empty;
 
+        [BsonElement("reset_password_code")]
+        public string? ResetPasswordCode { get; set; }
+
+        [BsonElement("reset_password_code_expiry")]
+        public DateTime? ResetPasswordCodeExpiry { get; set; }
+
         [BsonElement("role")]
         public UserRole Role { get; set; } = UserRole.User;
 
