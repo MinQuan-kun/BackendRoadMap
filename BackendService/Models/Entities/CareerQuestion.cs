@@ -13,6 +13,12 @@ namespace BackendService.Models.Entities
         [BsonElement("question")]
         public string Question { get; set; } = string.Empty;
 
+        [BsonElement("type")]
+        public string Type { get; set; } = "single_choice";
+
+        [BsonElement("order")]
+        public int Order { get; set; }
+
         [BsonElement("options")]
         public List<QuestionOption> Options { get; set; } = new();
     }

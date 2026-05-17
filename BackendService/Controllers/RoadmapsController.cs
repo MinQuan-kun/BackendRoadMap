@@ -50,7 +50,7 @@ namespace BackendService.Controllers
                         GraphId = graphId,
                         Title = n.Title,
                         NodeType = n.NodeType,
-                        ReferenceId = n.ReferenceId,
+                        ReferenceId = n.ReferenceId ?? string.Empty,
                         PositionX = n.PositionX,
                         PositionY = n.PositionY
                     };
@@ -144,7 +144,7 @@ namespace BackendService.Controllers
                         GraphId = graphId,
                         Title = n.Title,
                         NodeType = n.NodeType,
-                        ReferenceId = n.ReferenceId,
+                        ReferenceId = n.ReferenceId ?? string.Empty,
                         PositionX = n.PositionX,
                         PositionY = n.PositionY
                     };

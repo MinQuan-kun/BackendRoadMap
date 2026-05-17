@@ -18,5 +18,8 @@ namespace BackendService.Models.Entities
 
         [BsonElement("question_ids")]
         public List<string> QuestionIds { get; set; } = new();
+
+        [BsonElement("is_active")]
+        public bool IsActive { get; set; } = false;
     }
 }
