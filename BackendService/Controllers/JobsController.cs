@@ -99,6 +99,9 @@ namespace BackendService.Controllers
                 salary = j.Salary ?? "Thỏa thuận",
                 experienceLevel = j.ExperienceLevel,
                 skills = j.RequiredSkillTags,
+                description = j.Description,
+                roadmapGraphId = j.RoadmapGraphId,
+                targetRoadmapId = j.RoadmapGraphId,
                 postedAt = j.CreatedAt.ToString("dd/MM/yyyy"),
                 matchingRate = 0, // Placeholder
                 hasApplied = userApplications.Contains(j.Id!)

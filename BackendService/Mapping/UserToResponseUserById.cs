@@ -24,7 +24,9 @@ namespace BackendService.Mapping
                 Skills = user.SkillTags,
                 CompletedNodes = user.CompletedNodes,
                 SkippedNodes = user.SkippedNodes,
-                FollowedPathwayIds = user.FollowedPathwayIds
+                FollowedPathwayIds = user.FollowedPathwayIds,
+                IsRecruiterVerified = user.IsRecruiterVerified,
+                IsApproved = user.IsRecruiterVerified
             };
         }
     }
