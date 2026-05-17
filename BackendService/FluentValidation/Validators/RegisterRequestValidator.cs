@@ -1,4 +1,5 @@
 ﻿using BackendService.Models.DTOs.User.Requests;
+using BackendService.Models.Entities;
 using FluentValidation;
 
 namespace BackendService.FluentValidation.Validators
@@ -16,6 +17,10 @@ namespace BackendService.FluentValidation.Validators
             RuleFor(x => x.Password)
                 .NotEmpty().WithMessage("Mật khẩu không được để trống.")
                 .MinimumLength(6).WithMessage("Mật khẩu phải có ít nhất 8 ký tự.");
+
+            RuleFor(x => x.Role)
+                .Must(role => role == UserRole.User || role == UserRole.Recruiter)
+                .WithMessage("Vai trò đăng ký không hợp lệ.");
         }
     }
 }

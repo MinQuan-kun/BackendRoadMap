@@ -30,6 +30,7 @@ namespace BackendService.Mapping
                 } : null,
                 SkillTags = user.SkillTags,
                 IsRecruiterVerified = user.IsRecruiterVerified,
+                IsApproved = user.IsRecruiterVerified,
                 CreatedAt = user.CreatedAt
             };
         }

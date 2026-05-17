@@ -17,7 +17,7 @@ namespace BackendService.Models.Entities.Recruitment
         public string UserId { get; set; } = string.Empty;
 
         [BsonElement("status")]
-        public string Status { get; set; } = "pending";
+        public string Status { get; set; } = "Pending";
 
         [BsonElement("message")]
         public string? Message { get; set; }

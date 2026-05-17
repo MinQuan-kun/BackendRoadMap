@@ -4,6 +4,7 @@ using MongoDB.Driver;
 using BackendService.Data;
 using BackendService.Models.Entities;
 using BackendService.Models.DTOs.User.Responses;
+using BackendService.Models.DTOs.User.Requests;
 using BackendService.Mapping;
 using Microsoft.Extensions.Options;
 using BackendService.Configurations;
@@ -56,17 +57,50 @@ namespace BackendService.Controllers
         [HttpPost("users/{id}/approve-recruiter")]
         public async Task<IActionResult> ApproveRecruiter(string id)
         {
-            var update = Builders<User>.Update.Set(u => u.Role, UserRole.Recruiter);
-            await _context.Users.UpdateOneAsync(u => u.Id == id, update);
+            var update = Builders<User>.Update
+                .Set(u => u.Role, UserRole.Recruiter)
+                .Set(u => u.IsRecruiterVerified, true)
+                .Set(u => u.Status, UserStatus.Active)
+                .Set(u => u.UpdatedAt, DateTime.UtcNow);
+
+            var result = await _context.Users.UpdateOneAsync(u => u.Id == id, update);
+            if (result.MatchedCount == 0) return NotFound("Người dùng không tồn tại.");
+
             return Ok(new { message = "Đã duyệt quyền Nhà tuyển dụng." });
         }
 
         [HttpPost("users/{id}/reject-recruiter")]
         public async Task<IActionResult> RejectRecruiter(string id)
         {
-            var update = Builders<User>.Update.Set(u => u.Role, UserRole.User);
-            await _context.Users.UpdateOneAsync(u => u.Id == id, update);
+            var update = Builders<User>.Update
+                .Set(u => u.Role, UserRole.User)
+                .Set(u => u.IsRecruiterVerified, false)
+                .Set(u => u.UpdatedAt, DateTime.UtcNow);
+
+            var result = await _context.Users.UpdateOneAsync(u => u.Id == id, update);
+            if (result.MatchedCount == 0) return NotFound("Người dùng không tồn tại.");
+
             return Ok(new { message = "Đã từ chối quyền Nhà tuyển dụng." });
+        }
+
+        [HttpPut("users/{id}")]
+        public async Task<IActionResult> UpdateUser(string id, [FromBody] UpdateUserRequestDto request)
+        {
+            var user = await _context.Users.Find(u => u.Id == id).FirstOrDefaultAsync();
+            if (user == null) return NotFound("Người dùng không tồn tại.");
+
+            if (!string.IsNullOrEmpty(request.UserName)) user.UserName = request.UserName;
+            if (!string.IsNullOrEmpty(request.Email)) user.Email = request.Email;
+            if (!string.IsNullOrEmpty(request.DisplayName)) user.DisplayName = request.DisplayName;
+            if (!string.IsNullOrEmpty(request.Bio)) user.Bio = request.Bio;
+            if (request.Role.HasValue) user.Role = request.Role.Value;
+
+            user.UpdatedAt = DateTime.UtcNow;
+
+            await _context.Users.ReplaceOneAsync(u => u.Id == id, user);
+
+            var response = UserToUserResponseDto.Transform(user);
+            return Ok(response);
         }
 
         [HttpGet("stats")]

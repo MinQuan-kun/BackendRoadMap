@@ -12,7 +12,8 @@ namespace BackendService.Mapping
                 UserName = dto.UserName,
                 PasswordHash = dto.Password,
                 Email = dto.Email,
-                Role = UserRole.User,
+                Role = dto.Role == UserRole.Recruiter ? UserRole.Recruiter : UserRole.User,
+                IsRecruiterVerified = false,
                 Bio = string.Empty,
                 CreatedAt = DateTime.UtcNow,
             };

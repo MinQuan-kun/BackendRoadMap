@@ -19,6 +19,7 @@ namespace BackendService.Models.DTOs.User.Responses
         public UserLinksDto? Links { get; set; }
         public List<string> SkillTags { get; set; } = new();
         public bool IsRecruiterVerified { get; set; }
+        public bool IsApproved { get; set; }
         public DateTime CreatedAt { get; set; }
     }
 
