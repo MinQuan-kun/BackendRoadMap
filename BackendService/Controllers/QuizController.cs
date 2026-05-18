@@ -1,6 +1,7 @@
 using BackendService.Models.DTOs.Assessment;
 using BackendService.Models.Entities;
 using BackendService.Services.Interface;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 
@@ -26,6 +27,7 @@ namespace BackendService.Controllers
             return Ok(activeQuiz);
         }
 
+        [Authorize]
         [HttpPost("submit")]
         public async Task<ActionResult<CareerQuizResult>> SubmitQuiz([FromBody] QuizSubmissionDto request, CancellationToken cancellationToken)
         {
@@ -42,6 +44,7 @@ namespace BackendService.Controllers
             }
         }
 
+        [Authorize]
         [HttpGet("result/{id}")]
         public async Task<ActionResult<CareerQuizResult>> GetResultById(string id, CancellationToken cancellationToken)
         {

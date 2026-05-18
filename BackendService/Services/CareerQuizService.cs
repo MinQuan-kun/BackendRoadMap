@@ -47,63 +47,51 @@ namespace BackendService.Services
             var activeQuiz = await _careerQuizRepository.GetQuizByIdAsync(request.QuizId, cancellationToken);
             if (activeQuiz == null) throw new KeyNotFoundException("Quiz not found.");
 
+            // Weighted scoring: accumulate score per pathway based on admin-configured weights
             var pathwayScores = new Dictionary<string, int>();
             var recommendedCourseIds = new HashSet<string>();
-            string? explicitPreferencePathwayId = null;
 
             foreach (var answer in request.Answers)
             {
                 var question = await _careerQuizRepository.GetQuestionByIdAsync(answer.Key, cancellationToken);
                 if (question == null) continue;
 
-                var selectedTexts = answer.Value.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(s => s.Trim()).ToList();
-
-                if (question.Question.ToLower().Contains("học engine nào") || question.Question.ToLower().Contains("engine"))
-                {
-                    var primaryChoice = selectedTexts.FirstOrDefault();
-                    if (primaryChoice == "Unity") explicitPreferencePathwayId = "pathway_unity";
-                    else if (primaryChoice == "Unreal Engine") explicitPreferencePathwayId = "pathway_unreal";
-                }
+                // Support multi_choice: answers may be comma-separated
+                var selectedTexts = answer.Value.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(s => s.Trim())
+                    .ToList();
 
                 foreach (var text in selectedTexts)
                 {
                     var selectedOption = question.Options.FirstOrDefault(o => o.Text == text);
-                    if (selectedOption != null)
-                    {
-                        if (selectedOption.MappingPathwayIds != null)
-                        {
-                            foreach (var pathwayId in selectedOption.MappingPathwayIds)
-                            {
-                                if (!pathwayScores.ContainsKey(pathwayId)) pathwayScores[pathwayId] = 0;
-                                pathwayScores[pathwayId] += selectedOption.Weight;
-                            }
-                        }
+                    if (selectedOption == null) continue;
 
-                        if (selectedOption.MappingCourseIds != null)
+                    // Accumulate pathway weights
+                    if (selectedOption.MappingPathwayIds != null)
+                    {
+                        foreach (var pathwayId in selectedOption.MappingPathwayIds)
                         {
-                            foreach (var courseId in selectedOption.MappingCourseIds)
-                            {
-                                recommendedCourseIds.Add(courseId);
-                            }
+                            if (!pathwayScores.ContainsKey(pathwayId))
+                                pathwayScores[pathwayId] = 0;
+                            pathwayScores[pathwayId] += selectedOption.Weight;
                         }
+                    }
+
+                    // Collect recommended courses
+                    if (selectedOption.MappingCourseIds != null)
+                    {
+                        foreach (var courseId in selectedOption.MappingCourseIds)
+                            recommendedCourseIds.Add(courseId);
                     }
                 }
             }
 
-            var topPathways = pathwayScores.OrderByDescending(x => x.Value).Take(3).Select(x => x.Key).ToList();
-
-            bool hasConflict = false;
-            if (!string.IsNullOrEmpty(explicitPreferencePathwayId) && topPathways.Any())
-            {
-                if (topPathways.First() != explicitPreferencePathwayId)
-                {
-                    hasConflict = true;
-                    if (!topPathways.Contains(explicitPreferencePathwayId))
-                    {
-                        topPathways.Add(explicitPreferencePathwayId);
-                    }
-                }
-            }
+            // Rank pathways by total accumulated weight, take top 3
+            var topPathways = pathwayScores
+                .OrderByDescending(x => x.Value)
+                .Take(3)
+                .Select(x => x.Key)
+                .ToList();
 
             var result = new CareerQuizResult
             {
@@ -112,8 +100,8 @@ namespace BackendService.Services
                 Answers = request.Answers,
                 RecommendedPathwayIds = topPathways,
                 RecommendedCourseIds = recommendedCourseIds.ToList(),
-                ExplicitPreferencePathwayId = explicitPreferencePathwayId,
-                HasConflict = hasConflict,
+                ExplicitPreferencePathwayId = null,
+                HasConflict = false,
                 CreatedAt = DateTime.UtcNow
             };
 
