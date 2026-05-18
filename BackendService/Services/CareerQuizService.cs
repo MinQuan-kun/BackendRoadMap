@@ -47,8 +47,7 @@ namespace BackendService.Services
             var activeQuiz = await _careerQuizRepository.GetQuizByIdAsync(request.QuizId, cancellationToken);
             if (activeQuiz == null) throw new KeyNotFoundException("Quiz not found.");
 
-            // Weighted scoring: accumulate score per pathway based on admin-configured weights
-            var pathwayScores = new Dictionary<string, int>();
+            var pathwayMetrics = new Dictionary<string, (int Frequency, int TotalWeight)>();
             var recommendedCourseIds = new HashSet<string>();
 
             foreach (var answer in request.Answers)
@@ -56,39 +55,53 @@ namespace BackendService.Services
                 var question = await _careerQuizRepository.GetQuestionByIdAsync(answer.Key, cancellationToken);
                 if (question == null) continue;
 
-                // Support multi_choice: answers may be comma-separated
                 var selectedTexts = answer.Value.Split(',', StringSplitOptions.RemoveEmptyEntries)
                     .Select(s => s.Trim())
                     .ToList();
+
+                var pathwaysInQuestion = new HashSet<string>();
+                var questionPathwayWeights = new Dictionary<string, int>();
 
                 foreach (var text in selectedTexts)
                 {
                     var selectedOption = question.Options.FirstOrDefault(o => o.Text == text);
                     if (selectedOption == null) continue;
 
-                    // Accumulate pathway weights
                     if (selectedOption.MappingPathwayIds != null)
                     {
                         foreach (var pathwayId in selectedOption.MappingPathwayIds)
                         {
-                            if (!pathwayScores.ContainsKey(pathwayId))
-                                pathwayScores[pathwayId] = 0;
-                            pathwayScores[pathwayId] += selectedOption.Weight;
+                            pathwaysInQuestion.Add(pathwayId);
+                            if (!questionPathwayWeights.ContainsKey(pathwayId))
+                                questionPathwayWeights[pathwayId] = 0;
+                            questionPathwayWeights[pathwayId] += selectedOption.Weight;
                         }
                     }
 
-                    // Collect recommended courses
                     if (selectedOption.MappingCourseIds != null)
                     {
                         foreach (var courseId in selectedOption.MappingCourseIds)
                             recommendedCourseIds.Add(courseId);
                     }
                 }
+
+                foreach (var pathwayId in pathwaysInQuestion)
+                {
+                    if (!pathwayMetrics.ContainsKey(pathwayId))
+                    {
+                        pathwayMetrics[pathwayId] = (0, 0);
+                    }
+                    var current = pathwayMetrics[pathwayId];
+                    pathwayMetrics[pathwayId] = (
+                        current.Frequency + 1,
+                        current.TotalWeight + questionPathwayWeights[pathwayId]
+                    );
+                }
             }
 
-            // Rank pathways by total accumulated weight, take top 3
-            var topPathways = pathwayScores
-                .OrderByDescending(x => x.Value)
+            var topPathways = pathwayMetrics
+                .OrderByDescending(x => x.Value.Frequency)
+                .ThenByDescending(x => x.Value.TotalWeight)
                 .Take(3)
                 .Select(x => x.Key)
                 .ToList();

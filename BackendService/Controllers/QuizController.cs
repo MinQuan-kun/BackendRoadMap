@@ -44,7 +44,6 @@ namespace BackendService.Controllers
             }
         }
 
-        [Authorize]
         [HttpGet("result/{id}")]
         public async Task<ActionResult<CareerQuizResult>> GetResultById(string id, CancellationToken cancellationToken)
         {
