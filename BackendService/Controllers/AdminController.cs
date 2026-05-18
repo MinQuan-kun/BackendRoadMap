@@ -300,7 +300,7 @@ namespace BackendService.Controllers
                         var lesson = new Lesson
                         {
                             Title = lReq.Title,
-                            Description = $"Nội dung bài học {lReq.Title} đang được cập nhật...",
+                            Description = !string.IsNullOrEmpty(lReq.Description) ? lReq.Description : $"Nội dung bài học {lReq.Title} đang được cập nhật...",
                             Difficulty = lReq.Difficulty ?? "easy",
                             XPReward = lReq.XPReward > 0 ? lReq.XPReward : 10,
                             TaskIds = taskIds
@@ -495,7 +495,7 @@ namespace BackendService.Controllers
                         var lesson = new Lesson
                         {
                             Title = lReq.Title,
-                            Description = $"Nội dung bài học {lReq.Title} đang được cập nhật...",
+                            Description = !string.IsNullOrEmpty(lReq.Description) ? lReq.Description : $"Nội dung bài học {lReq.Title} đang được cập nhật...",
                             Difficulty = lReq.Difficulty ?? "easy",
                             XPReward = lReq.XPReward > 0 ? lReq.XPReward : 10,
                             TaskIds = taskIds

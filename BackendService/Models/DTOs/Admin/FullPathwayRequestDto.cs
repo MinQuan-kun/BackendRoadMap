@@ -57,6 +57,7 @@ namespace BackendService.Models.DTOs.Admin
     public class FullLessonRequestDto
     {
         public string Title { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
         public string Type { get; set; } = "text";
         public string? Difficulty { get; set; }
         public int XPReward { get; set; }

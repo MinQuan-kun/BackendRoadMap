@@ -109,7 +109,6 @@ namespace BackendService.Controllers
                 filter &= filterBuilder.Regex(p => p.Title, new MongoDB.Bson.BsonRegularExpression(engine, "i"));
             }
 
-            // Apply type filtering
             if (type == "official")
             {
                 filter &= filterBuilder.Eq(p => p.IsOfficial, true);
@@ -121,15 +120,12 @@ namespace BackendService.Controllers
             }
             else if (type == "recruiter")
             {
-                // Find all recruiter user IDs
                 var recruiters = await _context.Users.Find(u => u.Role == UserRole.Recruiter).ToListAsync();
                 var recruiterIds = recruiters.Select(u => u.Id).Where(id => id != null).ToList();
 
-                // Find all roadmap graph IDs used in Jobs
                 var jobs = await _context.Jobs.Find(j => !string.IsNullOrEmpty(j.RoadmapGraphId)).ToListAsync();
                 var jobRoadmapIds = jobs.Select(j => j.RoadmapGraphId).Where(id => id != null).ToList();
 
-                // Filter pathways created by recruiter OR having a roadmap graph used in a job
                 var recruiterFilter = filterBuilder.In(p => p.CreatedBy, recruiterIds) | 
                                       filterBuilder.In(p => p.RoadmapGraphId, jobRoadmapIds);
                 
@@ -163,7 +159,6 @@ namespace BackendService.Controllers
                     }
                     else
                     {
-                        // Default public listing (e.g. homepage): official OR approved community pathways
                         filter &= (filterBuilder.Eq(p => p.IsOfficial, true) | filterBuilder.Eq(p => p.IsApproved, true));
                     }
                 }
@@ -218,10 +213,89 @@ namespace BackendService.Controllers
         [HttpGet("{slug}/content")]
         public async Task<ActionResult> GetPathwayContent(string slug)
         {
-            var pathway = await _context.Pathways.Find(p => p.Slug == slug).FirstOrDefaultAsync();
-            if (pathway == null && slug.Length == 24 && System.Text.RegularExpressions.Regex.IsMatch(slug, @"^[0-9a-fA-F]{24}$"))
+            Console.WriteLine($"[GetPathwayContent] START slug='{slug}' len={slug?.Length}");
+            
+            if (slug?.Length == 24 && System.Text.RegularExpressions.Regex.IsMatch(slug, @"^[0-9a-fA-F]{24}$"))
             {
+                var exists = await _context.Pathways.Find(p => p.Id == slug || p.Slug == slug || p.RoadmapGraphId == slug).AnyAsync()
+                             || await _context.RoadmapGraphs.Find(g => g.Id == slug).AnyAsync();
+                
+                if (!exists)
+                {
+                    Console.WriteLine($"[GetPathwayContent] ID '{slug}' not found in database. Redirecting to appropriate official pathway...");
+                    var job = await _context.Jobs.Find(j => j.RoadmapGraphId == slug || j.Id == slug).FirstOrDefaultAsync();
+                    if (job != null && job.Title.Contains("Unreal", StringComparison.OrdinalIgnoreCase))
+                    {
+                        slug = "unreal-engine-beginner";
+                        Console.WriteLine($"[GetPathwayContent] Job title contains Unreal. Redirected to '{slug}'");
+                    }
+                    else
+                    {
+                        slug = "unity-game-beginner";
+                        Console.WriteLine($"[GetPathwayContent] Default redirection to '{slug}'");
+                    }
+                }
+            }
+
+            var pathway = await _context.Pathways.Find(p => p.Slug == slug).FirstOrDefaultAsync();
+            if (pathway != null)
+            {
+                Console.WriteLine($"[GetPathwayContent] Found pathway by Slug: '{pathway.Id}'");
+            }
+
+            if (pathway == null && slug?.Length == 24 && System.Text.RegularExpressions.Regex.IsMatch(slug, @"^[0-9a-fA-F]{24}$"))
+            {
+                Console.WriteLine($"[GetPathwayContent] Slug '{slug}' matches 24-char hex format. Checking fallbacks...");
                 pathway = await _context.Pathways.Find(p => p.Id == slug).FirstOrDefaultAsync();
+                if (pathway != null) Console.WriteLine($"[GetPathwayContent] Fallback 1: Found Pathway by Id: '{pathway.Id}'");
+                
+                if (pathway == null)
+                {
+                    pathway = await _context.Pathways.Find(p => p.RoadmapGraphId == slug).FirstOrDefaultAsync();
+                    if (pathway != null) Console.WriteLine($"[GetPathwayContent] Fallback 2: Found Pathway by RoadmapGraphId (string): '{pathway.Id}'");
+                }
+
+                // 3. Try finding Pathway by RoadmapGraphId as ObjectId (in case stored as ObjectId in DB)
+                if (pathway == null && MongoDB.Bson.ObjectId.TryParse(slug, out var graphObjId))
+                {
+                    var filter = Builders<Pathway>.Filter.Eq("roadmap_graph_id", graphObjId);
+                    pathway = await _context.Pathways.Find(filter).FirstOrDefaultAsync();
+                    if (pathway != null) Console.WriteLine($"[GetPathwayContent] Fallback 3: Found Pathway by RoadmapGraphId (ObjectId): '{pathway.Id}'");
+                }
+
+                // 4. Try finding if a RoadmapGraph exists with this ID, and dynamically mock a Pathway
+                if (pathway == null)
+                {
+                    Console.WriteLine($"[GetPathwayContent] Pathway still null. Looking up RoadmapGraph with ID '{slug}'...");
+                    var graph = await _context.RoadmapGraphs.Find(g => g.Id == slug).FirstOrDefaultAsync();
+                    if (graph == null && MongoDB.Bson.ObjectId.TryParse(slug, out var gObjId))
+                    {
+                        var graphFilter = Builders<RoadmapGraph>.Filter.Eq("Id", gObjId);
+                        graph = await _context.RoadmapGraphs.Find(graphFilter).FirstOrDefaultAsync();
+                    }
+
+                    if (graph != null)
+                    {
+                        Console.WriteLine($"[GetPathwayContent] Fallback 4: Found RoadmapGraph '{graph.Id}'. Creating synthetic Pathway!");
+                        pathway = new Pathway
+                        {
+                            Id = slug,
+                            Title = graph.Title,
+                            Slug = graph.Title.ToLower().Replace(" ", "-") + "-" + slug.Substring(0, 6),
+                            Description = "Lộ trình tuyển dụng dành riêng cho bạn.",
+                            RoadmapGraphId = graph.Id,
+                            CourseIds = new List<string>()
+                        };
+                    }
+                    else
+                    {
+                        Console.WriteLine($"[GetPathwayContent] RoadmapGraph not found for ID '{slug}'");
+                    }
+                }
+            }
+            else if (pathway == null)
+            {
+                Console.WriteLine($"[GetPathwayContent] Slug '{slug}' is NOT 24-char hex format. Skipping fallbacks.");
             }
 
             if (pathway == null)
