@@ -1,0 +1,28 @@
+services:
+  - type: web
+    name: BackendService
+    env: docker
+    dockerfilePath: ./Dockerfile
+    region: singapore
+    plan: free
+    envVars:
+      - key: ConnectionStrings__DefaultConnection
+        sync: false
+      - key: Jwt__Key
+        sync: false
+      - key: Cloudinary__CloudName
+        sync: false
+      - key: Cloudinary__ApiKey
+        sync: false
+      - key: Cloudinary__ApiSecret
+        sync: false
+      - key: EmailOptions__SmtpServer
+        sync: false
+      - key: EmailOptions__SmtpPort
+        sync: false
+      - key: EmailOptions__SenderName
+        sync: false
+      - key: EmailOptions__SenderEmail
+        sync: false
+      - key: EmailOptions__SenderPassword
+        sync: false
