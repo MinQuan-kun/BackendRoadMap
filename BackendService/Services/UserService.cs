@@ -7,16 +7,18 @@ using BackendService.Services.Interface;
 
 namespace BackendService.Services
 {
-    public class UserService(IUserRepository userRepository) : IUserService
+    public class UserService(IUserRepository userRepository, ICareerQuizRepository careerQuizRepository) : IUserService
     {
         public readonly IUserRepository _userRepository = userRepository;
+        private readonly ICareerQuizRepository _careerQuizRepository = careerQuizRepository;
 
         public async Task<ResponseUserByIdDto> GetUserByIdAsync(string id, CancellationToken cancellationToken)
         {
             var user = await _userRepository.GetByIdAsync(id, cancellationToken);  
+            if (user == null) return null;
             var responseUser = UserToResponseUserById.Transform(user);
+            responseUser.HasCompletedQuiz = await _careerQuizRepository.HasCompletedQuizAsync(id, cancellationToken);
             return responseUser;
-
         }
 
         public async Task<RegisterResponseDto> RegisterAsync(RegisterRequestDto request, CancellationToken cancellationToken)
@@ -108,6 +110,35 @@ namespace BackendService.Services
         public async Task DeleteAccountAsync(string userId, CancellationToken cancellationToken)
         {
             await _userRepository.DeleteAsync(userId, cancellationToken);
+        }
+
+        public async Task FollowPathwayAsync(string userId, string pathwayId, CancellationToken cancellationToken)
+        {
+            var user = await _userRepository.GetByIdAsync(userId, cancellationToken);
+            if (user == null) throw new KeyNotFoundException("User not found.");
+
+            if (user.FollowedPathwayIds == null)
+            {
+                user.FollowedPathwayIds = new List<string>();
+            }
+
+            if (!user.FollowedPathwayIds.Contains(pathwayId))
+            {
+                user.FollowedPathwayIds.Add(pathwayId);
+                await _userRepository.UpdateAsync(userId, user, cancellationToken);
+            }
+        }
+
+        public async Task UnfollowPathwayAsync(string userId, string pathwayId, CancellationToken cancellationToken)
+        {
+            var user = await _userRepository.GetByIdAsync(userId, cancellationToken);
+            if (user == null) throw new KeyNotFoundException("User not found.");
+
+            if (user.FollowedPathwayIds != null && user.FollowedPathwayIds.Contains(pathwayId))
+            {
+                user.FollowedPathwayIds.Remove(pathwayId);
+                await _userRepository.UpdateAsync(userId, user, cancellationToken);
+            }
         }
     }
 }

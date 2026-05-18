@@ -29,9 +29,20 @@ builder.Services.AddScoped<ICloudinaryService, CloudinaryService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IEmailService, SMTPEmailService>();
+builder.Services.AddScoped<ILessonService, LessonService>();
+builder.Services.AddScoped<ICareerQuizService, CareerQuizService>();
+builder.Services.AddScoped<IJobService, JobService>();
+builder.Services.AddScoped<IRoadmapService, RoadmapService>();
 
 // Đăng ky Repository
 builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<ILessonRepository, LessonRepository>();
+builder.Services.AddScoped<IUserProgressRepository, UserProgressRepository>();
+builder.Services.AddScoped<ICareerQuizRepository, CareerQuizRepository>();
+builder.Services.AddScoped<IJobRepository, JobRepository>();
+builder.Services.AddScoped<IJobApplicationRepository, JobApplicationRepository>();
+builder.Services.AddScoped<IRoadmapRepository, RoadmapRepository>();
+builder.Services.AddScoped<IPathwayRepository, PathwayRepository>();
 
 
 // Đăng ký Validator

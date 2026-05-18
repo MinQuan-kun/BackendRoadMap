@@ -11,5 +11,7 @@ namespace BackendService.Services.Interface
         Task UpdateProfileAsync(string userId, UpdateProfileRequestDto request, CancellationToken cancellationToken);
         Task ChangePasswordAsync(string userId, string oldPassword, string newPassword, CancellationToken cancellationToken);
         Task DeleteAccountAsync(string userId, CancellationToken cancellationToken);
+        Task FollowPathwayAsync(string userId, string pathwayId, CancellationToken cancellationToken);
+        Task UnfollowPathwayAsync(string userId, string pathwayId, CancellationToken cancellationToken);
     }
 }

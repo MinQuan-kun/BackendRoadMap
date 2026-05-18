@@ -4,8 +4,6 @@ using BackendService.Models.DTOs.User.Requests;
 using BackendService.Models.DTOs.User.Responses;
 using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
-using BackendService.Data;
-using MongoDB.Driver;
 
 namespace BackendService.Controllers
 {
@@ -16,14 +14,12 @@ namespace BackendService.Controllers
         private readonly IUserService _userService;
         private readonly IAuthService _authService;
         private readonly ICloudinaryService _cloudinaryService;
-        private readonly MongoDbContext _context;
 
-        public UsersController(IUserService userService, IAuthService authService, ICloudinaryService cloudinaryService, MongoDbContext context)
+        public UsersController(IUserService userService, IAuthService authService, ICloudinaryService cloudinaryService)
         {
             _userService = userService;
             _authService = authService;
             _cloudinaryService = cloudinaryService;
-            _context = context;
         }
 
         [HttpPost("register")]
@@ -59,10 +55,6 @@ namespace BackendService.Controllers
             if (string.IsNullOrEmpty(userId)) return Unauthorized();
 
             var user = await _userService.GetUserByIdAsync(userId, cancellationToken);
-            if (user != null)
-            {
-                user.HasCompletedQuiz = await _context.CareerQuizResults.Find(r => r.UserId == userId).AnyAsync(cancellationToken);
-            }
             return Ok(user);
         }
 
@@ -78,10 +70,6 @@ namespace BackendService.Controllers
 
             await _userService.UpdateProfileAsync(userId, request, cancellationToken);
             var updatedUser = await _userService.GetUserByIdAsync(userId, cancellationToken);
-            if (updatedUser != null)
-            {
-                updatedUser.HasCompletedQuiz = await _context.CareerQuizResults.Find(r => r.UserId == userId).AnyAsync(cancellationToken);
-            }
             return Ok(updatedUser);
         }
 
@@ -129,21 +117,15 @@ namespace BackendService.Controllers
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (string.IsNullOrEmpty(userId)) return Unauthorized();
 
-            var user = await _context.Users.Find(u => u.Id == userId).FirstOrDefaultAsync(cancellationToken);
-            if (user == null) return NotFound("User not found.");
-
-            if (user.FollowedPathwayIds == null)
+            try
             {
-                user.FollowedPathwayIds = new List<string>();
+                await _userService.FollowPathwayAsync(userId, pathwayId, cancellationToken);
+                return Ok(new { message = "Theo dõi lộ trình thành công." });
             }
-
-            if (!user.FollowedPathwayIds.Contains(pathwayId))
+            catch (KeyNotFoundException)
             {
-                var update = Builders<BackendService.Models.Entities.User>.Update.Push(u => u.FollowedPathwayIds, pathwayId);
-                await _context.Users.UpdateOneAsync(u => u.Id == userId, update, cancellationToken: cancellationToken);
+                return NotFound("User not found.");
             }
-
-            return Ok(new { message = "Theo dõi lộ trình thành công." });
         }
 
         [HttpPost("unfollow/{pathwayId}")]
@@ -153,16 +135,15 @@ namespace BackendService.Controllers
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (string.IsNullOrEmpty(userId)) return Unauthorized();
 
-            var user = await _context.Users.Find(u => u.Id == userId).FirstOrDefaultAsync(cancellationToken);
-            if (user == null) return NotFound("User not found.");
-
-            if (user.FollowedPathwayIds != null && user.FollowedPathwayIds.Contains(pathwayId))
+            try
             {
-                var update = Builders<BackendService.Models.Entities.User>.Update.Pull(u => u.FollowedPathwayIds, pathwayId);
-                await _context.Users.UpdateOneAsync(u => u.Id == userId, update, cancellationToken: cancellationToken);
+                await _userService.UnfollowPathwayAsync(userId, pathwayId, cancellationToken);
+                return Ok(new { message = "Hủy theo dõi lộ trình thành công." });
             }
-
-            return Ok(new { message = "Hủy theo dõi lộ trình thành công." });
+            catch (KeyNotFoundException)
+            {
+                return NotFound("User not found.");
+            }
         }
 
         [HttpPost("profile/avatar")]
