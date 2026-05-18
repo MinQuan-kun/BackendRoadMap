@@ -6,7 +6,7 @@ services:
     region: singapore
     plan: free
     envVars:
-      - key: ConnectionStrings__DefaultConnection
+      - key: ConnectionStrings__GameDevDB
         sync: false
       - key: Jwt__Key
         sync: false
@@ -15,6 +15,8 @@ services:
       - key: Cloudinary__ApiKey
         sync: false
       - key: Cloudinary__ApiSecret
+        sync: false
+      - key: Cloudinary__BaseFolder
         sync: false
       - key: EmailOptions__SmtpServer
         sync: false
@@ -25,4 +27,6 @@ services:
       - key: EmailOptions__SenderEmail
         sync: false
       - key: EmailOptions__SenderPassword
+        sync: false
+      - key: GeminiAI__ApiKey
         sync: false
