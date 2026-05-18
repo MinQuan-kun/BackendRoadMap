@@ -21,6 +21,8 @@ namespace BackendService.Models.DTOs.User.Responses
         public List<string> CompletedNodes { get; set; } = new();
         public List<string> SkippedNodes { get; set; } = new();
         public List<string> FollowedPathwayIds { get; set; } = new();
+        public List<string> CompletedLessonIds { get; set; } = new();
+        public List<string> CompletedTaskIds { get; set; } = new();
         public bool IsRecruiterVerified { get; set; }
         public bool IsApproved { get; set; }
     }

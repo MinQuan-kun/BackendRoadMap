@@ -7,10 +7,11 @@ using BackendService.Services.Interface;
 
 namespace BackendService.Services
 {
-    public class UserService(IUserRepository userRepository, ICareerQuizRepository careerQuizRepository) : IUserService
+    public class UserService(IUserRepository userRepository, ICareerQuizRepository careerQuizRepository, IUserProgressRepository userProgressRepository) : IUserService
     {
         public readonly IUserRepository _userRepository = userRepository;
         private readonly ICareerQuizRepository _careerQuizRepository = careerQuizRepository;
+        private readonly IUserProgressRepository _userProgressRepository = userProgressRepository;
 
         public async Task<ResponseUserByIdDto> GetUserByIdAsync(string id, CancellationToken cancellationToken)
         {
@@ -18,6 +19,14 @@ namespace BackendService.Services
             if (user == null) return null;
             var responseUser = UserToResponseUserById.Transform(user);
             responseUser.HasCompletedQuiz = await _careerQuizRepository.HasCompletedQuizAsync(id, cancellationToken);
+
+            var progress = await _userProgressRepository.GetByUserIdAsync(id, cancellationToken);
+            if (progress != null)
+            {
+                responseUser.CompletedLessonIds = progress.CompletedLessonIds ?? new List<string>();
+                responseUser.CompletedTaskIds = progress.CompletedTaskIds ?? new List<string>();
+            }
+
             return responseUser;
         }
 

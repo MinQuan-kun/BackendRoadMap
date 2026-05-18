@@ -40,6 +40,14 @@ namespace BackendService.Controllers
                 return Ok(new List<object>());
             }
 
+            var userProgress = await _context.UserProgress
+                .Find(up => up.UserId == userId)
+                .FirstOrDefaultAsync(cancellationToken);
+            var completedLessonSet = new HashSet<string>(userProgress?.CompletedLessonIds ?? new List<string>());
+            foreach (var nodeId in user.CompletedNodes ?? new List<string>())
+                completedLessonSet.Add(nodeId);
+            var skippedSet = new HashSet<string>(user.SkippedNodes ?? new List<string>());
+
             var filter = Builders<Pathway>.Filter.In(p => p.Id, user.FollowedPathwayIds);
             var pathways = await _context.Pathways.Find(filter).ToListAsync(cancellationToken);
 
@@ -55,8 +63,8 @@ namespace BackendService.Controllers
                 var lessons = await _context.Lessons.Find(l => allLessonIds.Contains(l.Id!)).ToListAsync(cancellationToken);
 
                 int totalLessons = allLessonIds.Count;
-                int completedLessons = allLessonIds.Count(id => user.CompletedNodes.Contains(id));
-                int skippedLessons = allLessonIds.Count(id => user.SkippedNodes.Contains(id));
+                int completedLessons = allLessonIds.Count(id => completedLessonSet.Contains(id));
+                int skippedLessons = allLessonIds.Count(id => skippedSet.Contains(id));
 
                 result.Add(new
                 {
