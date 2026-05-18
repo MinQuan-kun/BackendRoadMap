@@ -3,13 +3,13 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
 # Copy file .csproj và restore các dependencies
-COPY ["BackendService.csproj", "./"]
-RUN dotnet restore "./BackendService.csproj"
+COPY ["BackendService/BackendService.csproj", "BackendService/"]
+RUN dotnet restore "BackendService/BackendService.csproj"
 
 # Copy toàn bộ code và build
 COPY . .
-RUN dotnet build "BackendService.csproj" -c Release -o /app/build
-RUN dotnet publish "BackendService.csproj" -c Release -o /app/publish /p:UseAppHost=false
+RUN dotnet build "BackendService/BackendService.csproj" -c Release -o /app/build
+RUN dotnet publish "BackendService/BackendService.csproj" -c Release -o /app/publish /p:UseAppHost=false
 
 # Image runtime để chạy ứng dụng
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
